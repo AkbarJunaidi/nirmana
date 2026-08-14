@@ -1,20 +1,12 @@
 """
 composition.py
 ================
-Menggabungkan beberapa teknik nirmana jadi SATU karya komposit, dua mode:
-
-1. StudyBoard (grid_board)
-   Papan studi perbandingan teknik -- persis pola tugas nirmana asli
-   (lihat referensi foto 3: grid berlabel "ORGANIK" vs "GEOMETRIK" berisi
-   beberapa swatch teknik berdampingan). Berguna untuk tugas kuliah yang
-   memang meminta perbandingan/eksplorasi beberapa teknik sekaligus.
-
-2. VoronoiMosaic (organic_mosaic)
-   Kanvas dipartisi jadi beberapa region organik (Voronoi cells dari
-   titik-titik acak), tiap region diisi teknik nirmana berbeda, lalu
-   disatukan jadi satu komposisi tunggal yang koheren -- mendekati
-   kompleksitas nirmana tekstur kaya (banyak motif berdampingan dalam
-   satu bidang, seperti pada referensi batik/motif kaya).
+Menggabungkan beberapa teknik nirmana jadi SATU karya komposit lewat
+VoronoiMosaic: kanvas dipartisi jadi beberapa region organik (Voronoi
+cells dari titik-titik acak), tiap region diisi teknik nirmana berbeda,
+lalu disatukan jadi satu komposisi tunggal yang koheren -- mendekati
+kompleksitas nirmana tekstur kaya (banyak motif berdampingan dalam satu
+bidang, seperti pada referensi batik/motif kaya).
 """
 
 import math
@@ -22,128 +14,12 @@ import random
 from typing import List, Optional, Tuple
 
 import numpy as np
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw
 
-from .line_nirmana import LineNirmanaGenerator
-from .organic_patterns import OrganicNirmanaGenerator
-from .geometric_patterns import GeometricNirmanaGenerator
-
-TECHNIQUE_LABELS = {
-    "garis": "Nirmana Garis",
-    "organik_burst": "Organik - Hatching Burst",
-    "organik_cells": "Organik - Concentric Cells",
-    "organik_branching": "Organik - DLA Branching",
-    "geometrik_kubus": "Geometrik - Isometric Cubes",
-    "geometrik_spiral": "Geometrik - Spiral Checkerboard",
-    "geometrik_grid": "Geometrik - Distorted Grid",
-}
-
-ORGANIC_SET = ["organik_burst", "organik_cells", "organik_branching"]
-GEOMETRIC_SET = ["geometrik_kubus", "geometrik_spiral", "geometrik_grid"]
-ALL_TECHNIQUES = ["garis"] + ORGANIC_SET + GEOMETRIC_SET
-
-
-def render_technique_swatch(technique: str, w: int, h: int, seed: int) -> Image.Image:
-    """Fungsi bersama untuk merender satu teknik pada ukuran & seed tertentu.
-    Dipakai baik oleh StudyBoard maupun VoronoiMosaic agar konsisten."""
-    if technique == "garis":
-        gen = LineNirmanaGenerator(w, h, seed=seed)
-        band_count = random.Random(seed).randint(14, 26)
-        return gen.generate(band_count=band_count)
-
-    if technique == "organik_burst":
-        return OrganicNirmanaGenerator(w, h, seed=seed).generate_hatching_burst()
-    if technique == "organik_cells":
-        return OrganicNirmanaGenerator(w, h, seed=seed).generate_concentric_cells()
-    if technique == "organik_branching":
-        return OrganicNirmanaGenerator(w, h, seed=seed).generate_reaction_diffusion_blob()
-
-    if technique == "geometrik_kubus":
-        return GeometricNirmanaGenerator(w, h, seed=seed).generate_isometric_cubes()
-    if technique == "geometrik_spiral":
-        return GeometricNirmanaGenerator(w, h, seed=seed).generate_spiral_checkerboard()
-    if technique == "geometrik_grid":
-        return GeometricNirmanaGenerator(w, h, seed=seed).generate_distorted_grid()
-
-    raise ValueError(f"Teknik tidak dikenali: {technique}")
-
-
-# ==============================================================
-# MODE A: STUDY BOARD (grid perbandingan berlabel)
-# ==============================================================
-class StudyBoard:
-    def __init__(self, width: int, height: int, seed: Optional[int] = None):
-        self.w = width
-        self.h = height
-        self.seed = seed if seed is not None else random.randint(0, 999999)
-        self.rng = random.Random(self.seed)
-
-    def generate(self, rows: int = 3, cols: int = 2,
-                 techniques: Optional[List[str]] = None,
-                 show_labels: bool = True,
-                 column_headers: Optional[Tuple[str, str]] = None) -> Image.Image:
-        """Membuat papan grid rows x cols, tiap sel = satu teknik.
-        Default: kolom kiri = organik, kolom kanan = geometrik (meniru
-        struktur referensi foto 3 persis)."""
-        board = Image.new("RGB", (self.w, self.h), (18, 18, 18))
-        draw = ImageDraw.Draw(board)
-
-        margin = int(min(self.w, self.h) * 0.035)
-        header_h = int(self.h * 0.05) if column_headers else 0
-        gutter = int(min(self.w, self.h) * 0.018)
-
-        grid_top = margin + header_h
-        grid_w = self.w - margin * 2
-        grid_h = self.h - grid_top - margin
-
-        cell_w = (grid_w - gutter * (cols - 1)) // cols
-        cell_h = (grid_h - gutter * (rows - 1)) // rows
-
-        if techniques is None:
-            # Default persis referensi: kolom 0 = organik, kolom 1 = geometrik
-            techniques = []
-            for r in range(rows):
-                row_pair = []
-                for c in range(cols):
-                    pool = ORGANIC_SET if c % 2 == 0 else GEOMETRIC_SET
-                    row_pair.append(self.rng.choice(pool))
-                techniques.append(row_pair)
-
-        try:
-            font = ImageFont.load_default(size=int(self.h * 0.022))
-        except TypeError:
-            font = ImageFont.load_default()
-
-        if column_headers:
-            for c in range(cols):
-                x0 = margin + c * (cell_w + gutter)
-                text = column_headers[c % len(column_headers)]
-                draw.text((x0 + cell_w / 2, margin / 2), text, fill=(255, 255, 255),
-                          font=font, anchor="mm")
-
-        for r in range(rows):
-            for c in range(cols):
-                technique = techniques[r][c]
-                x0 = margin + c * (cell_w + gutter)
-                y0 = grid_top + r * (cell_h + gutter)
-
-                sub_seed = self.seed + (r * cols + c) * 5417
-                swatch = render_technique_swatch(technique, cell_w, cell_h, sub_seed)
-                board.paste(swatch, (x0, y0))
-
-                draw.rectangle([x0, y0, x0 + cell_w - 1, y0 + cell_h - 1],
-                                outline=(255, 255, 255), width=max(1, int(self.h * 0.0015)))
-
-                if show_labels:
-                    label = TECHNIQUE_LABELS[technique]
-                    pad = int(cell_h * 0.02)
-                    text_box_h = int(cell_h * 0.07)
-                    draw.rectangle([x0, y0 + cell_h - text_box_h, x0 + cell_w, y0 + cell_h],
-                                    fill=(0, 0, 0))
-                    draw.text((x0 + pad, y0 + cell_h - text_box_h / 2), label,
-                               fill=(255, 255, 255), font=font, anchor="lm")
-
-        return board
+from .registry import (
+    render_base_technique as render_technique_swatch,
+    ALL_BASE_KEYS as ALL_TECHNIQUES,
+)
 
 
 # ==============================================================

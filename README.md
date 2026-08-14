@@ -95,20 +95,79 @@ Tiga pendekatan kedalaman yang berbeda secara fundamental dari teknik lain:
   sebagai base image (mode CLI otomatis memilih base acak dari teknik lain
   supaya hasilnya selalu kaya).
 
-### 6. Nirmana Kombinasi (Multi-Layer Composition)
+### 6. Depth Exploration (Jelajah Lebih Dalam)
+`generators/depth_explorations.py`
+
+Tiga pendekatan lagi, makin jauh dari "ilusi di atas kertas" menuju
+mekanisme kedalaman yang genuinely berbeda:
+
+- **Anaglyph Relief** — stereoskopi sungguhan. Tiap "bukit" digambar
+  sebagai kontur cincin konsentris pada dua kanvas mata kiri/kanan dengan
+  pusat digeser proporsional terhadap tinggi lokalnya, lalu digabung jadi
+  citra merah-cyan. Dipakai kacamata 3D anaglyph, kedalamannya benar-benar
+  terlihat — bukan cuma trik gambar di kertas datar.
+- **L-System Branching** — Lindenmayer System: tata bahasa string
+  rewriting yang sama persis dipakai memodelkan pertumbuhan tanaman secara
+  matematis (bukan random walk seperti DLA). Bounding box dihitung dulu
+  (dry-run pass) baru diskalakan supaya selalu memenuhi kanvas secara
+  proporsional.
+- **Parallax Silhouette** — beberapa lapis siluet organik ditumpuk dengan
+  gradasi value & skala (aerial/atmospheric perspective): elemen dekat
+  gelap & besar di depan, elemen jauh terang & kecil di belakang — cara
+  paling primal otak manusia membaca kedalaman lewat oklusi.
+
+### 8. Gestur Emosional (Abstrak Ekspresif -- Tanpa Objek, Tanpa Makna)
+`generators/emotive.py`
+
+> *"Nirmana adalah jeritan sunyi yang terperangkap di antara persimpangan
+> garis dan lengkung; ia tidak merekam rupa, melainkan mengendapkan
+> denyut emosi yang terlalu telanjang untuk dijelaskan oleh kata-kata."*
+
+Semua teknik lain di sistem ini bekerja dari kepastian matematis (simetri,
+distorsi terkontrol, tessellasi presisi). Teknik ini justru bekerja dari
+ketidakpastian yang disengaja -- tidak merepresentasikan objek apapun.
+Tiga elemen dikomposisikan bersama:
+
+- **Gesture strokes** — sapuan panjang lahir dari random-walk bermomentum
+  (bukan kurva matematis rapi), lebar garis naik-turun mengikuti fungsi
+  "denyut" (pulse envelope, bukan gradasi linear) -- seperti tekanan
+  tangan yang gemetar, menebal di titik tertekan, menipis saat melepas.
+- **Severing lines** — garis lurus tajam yang menyayat/memotong gestur,
+  representasi visual dari "persimpangan garis dan lengkung" yang
+  disebut dalam kalimat; sebagian sengaja terputus di tengah (jeda,
+  ketidaktuntasan).
+- **Tension knots** — simpul kusut acak di titik-titik tekanan tertentu,
+  tempat "jeritan" mengendap dan tak lagi bisa mengalir keluar.
+
+Semua elemen dikomposit dengan alpha blending (bukan flat fill) di atas
+wash tonal sangat halus, sehingga persilangan goresan menumpuk jadi lebih
+gelap secara alami -- seperti tinta asli yang menyerap berulang di kertas.
+
+### 9. Motif Radial (Repetisi & Simetri Klasik)
+`generators/radial_motif.py`
+
+Prinsip nirmana paling fundamental: satu motif dasar diulang dengan simetri
+di sekeliling pusat, mengisi seluruh bidang. Empat varian:
+
+- **Arrow Burst** — panah-panah tersegmentasi memancar dari pusat ke
+  penjuru kanvas, dengan lingkaran target konsentris di titik pusat.
+- **Dot Gradient X** — dua garis diagonal membentuk X, berisi lingkaran
+  bergradasi ukuran (halftone klasik), dengan taburan titik latar halus.
+- **Shape Cross** — 4 (atau lebih) lengan menyilang, tiap lengan berisi
+  barisan bentuk geometris berselang-seling (segitiga, kotak, lingkaran)
+  yang membesar dari pusat ke ujung.
+- **Weave Stripes** — garis-garis diagonal berselang-seling arah,
+  menciptakan ilusi anyaman/tenun optik.
+
+### 10. Mosaik Voronoi (Kombinasi Multi-Layer)
 `generators/composition.py`
 
-- **Papan Studi (`StudyBoard`)** — grid perbandingan beberapa teknik
-  sekaligus, berlabel per sel, kolom kiri "ORGANIK" / kolom kanan
-  "GEOMETRIK" — mereplikasi persis format tugas nirmana di referensi
-  foto 3 (papan eksplorasi/studi teknik).
-- **Mosaik Voronoi (`VoronoiMosaic`)** — kanvas dipartisi jadi beberapa
-  region organik (Voronoi cells dari titik acak), tiap region diisi
-  teknik nirmana yang berbeda lalu disatukan jadi satu komposisi utuh
-  dengan garis pembatas tipis antar-region. Mendekati kompleksitas
-  nirmana tekstur kaya (banyak motif berdampingan dalam satu bidang).
-  Otomatis membatasi resolusi kerja internal untuk kanvas besar
-  (cetak/4K) supaya tidak kehabisan memori.
+Kanvas dipartisi jadi beberapa region organik (Voronoi cells dari titik
+acak), tiap region diisi teknik nirmana yang berbeda lalu disatukan jadi
+satu komposisi utuh dengan garis pembatas tipis antar-region. Mendekati
+kompleksitas nirmana tekstur kaya (banyak motif berdampingan dalam satu
+bidang). Otomatis membatasi resolusi kerja internal untuk kanvas besar
+(cetak/4K) supaya tidak kehabisan memori.
 
 ## Sistem Warna
 
@@ -123,6 +182,28 @@ Tiga mode dipilih lewat CLI:
    kontras & keserasian tetap terjaga. Tersedia sebagai "satu warna acak
    untuk semua karya" atau "acak berbeda tiap karya" dalam satu batch.
 
+### Infrastruktur "Masterpiece" (Registry, Quality Evaluator, Galeri, Preset)
+
+- **`registry.py`** — satu sumber kebenaran untuk semua teknik dasar.
+  `main.py` dan `composition.py` (Mosaik Voronoi) memanggil
+  `render_base_technique()` yang sama persis dari sini — begitu ada
+  teknik baru ditambahkan, semua bagian sistem otomatis ikut punya akses.
+- **`quality.py`** — evaluator kualitas otomatis (`generate_best_of`).
+  Karena semua teknik memakai elemen acak, tidak semua seed menghasilkan
+  komposisi enak dipandang. Fungsi ini merender N kandidat, menilai
+  masing-masing lewat 4 metrik objektif (ink coverage balance, contrast,
+  edge density, centering), lalu memilih otomatis yang skornya tertinggi
+  — prinsip "best-of-N sampling" yang sama dipakai tool generative art
+  profesional. Diaktifkan lewat CLI (masukkan jumlah kandidat > 1).
+- **`gallery.py`** — setelah satu batch selesai, `main.py` otomatis
+  membuat `outputs/galeri.html`: kontak-sheet portable (gambar di-embed
+  base64, bisa dibuka/dibagikan sendirian) untuk melihat semua hasil
+  batch sekaligus di browser tanpa buka file satu-satu.
+- **`presets.py`** — 14 preset kurasi manual (kombinasi teknik + skema
+  warna yang sudah dicoba & terlihat bagus) untuk yang tidak mau pusing
+  memilih satu-satu lewat menu panjang. Preset tidak mengunci seed --
+  tiap render tetap unik, yang dikurasi hanya kombinasi teknik & gayanya.
+
 ## Struktur Proyek
 
 ```
@@ -135,12 +216,20 @@ nirmana/
 │   ├── geometric_patterns.py     # Teknik 3: Nirmana Geometrik (3 varian)
 │   ├── depth_illusion.py         # Teknik 4: Depth Illusion (3 varian)
 │   ├── advanced_depth.py         # Teknik 5: Advanced Depth (3 varian)
-│   ├── composition.py            # Teknik 6: Kombinasi Multi-Layer (2 mode)
+│   ├── depth_explorations.py     # Teknik 6: Depth Exploration (3 varian)
+│   ├── radial_motif.py           # Teknik 7: Motif Radial (4 varian)
+│   ├── emotive.py                # Teknik 8: Gestur Emosional (abstrak ekspresif)
+│   ├── composition.py            # Teknik 9: Mosaik Voronoi
+│   ├── registry.py               # Satu sumber kebenaran semua teknik dasar
+│   ├── quality.py                # Evaluator kualitas & best-of-N sampling
+│   ├── gallery.py                # Generator galeri HTML kontak-sheet
+│   ├── presets.py                # 14 preset kurasi teknik+warna siap pakai
 │   └── palette.py                # Palet kurasi + generator warna acak
-└── outputs/                      # Hasil render (dibuat otomatis)
+└── outputs/                      # Hasil render + galeri.html (dibuat otomatis)
 ```
 
 ## Menggunakan sebagai Library (tanpa CLI)
+
 
 ```python
 from generators.line_nirmana import LineNirmanaGenerator

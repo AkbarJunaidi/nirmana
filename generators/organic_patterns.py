@@ -32,28 +32,47 @@ class OrganicNirmanaGenerator:
     # ------------------------------------------------------------------
     # 1. HATCHING BURST (spora / leaf radiate cluster)
     # ------------------------------------------------------------------
-    def generate_hatching_burst(self, petal_count: int = None, supersample: int = 2) -> Image.Image:
+    def generate_hatching_burst(self, petal_count: int = None, supersample: int = 2,
+                                 n_clusters: int = None) -> Image.Image:
+        """Sekumpulan 'ledakan spora' (bukan cuma satu) tersebar di kanvas
+        dengan skala & rotasi bervariasi -- seperti serumpun tanaman/karang,
+        bukan satu tangkai kesepian di tengah kanvas kosong."""
         ss = supersample
         W, H = self.w * ss, self.h * ss
         img = Image.new("L", (W, H), 255)
         draw = ImageDraw.Draw(img)
 
-        base_x = self.rng.uniform(W * 0.35, W * 0.65)
-        base_y = self.rng.uniform(H * 0.55, H * 0.8)
+        n_clusters = n_clusters or self.rng.randint(4, 6)
+        placed: list = []
 
-        n = petal_count or self.rng.randint(9, 16)
-        spread = self.rng.uniform(math.pi * 0.9, math.pi * 1.5)
-        start_angle = -math.pi / 2 - spread / 2
+        # Penempatan berbasis grid kasar + jitter supaya cluster menyebar
+        # merata ke seluruh kanvas (bukan numpuk di satu sudut kalau lagi apes)
+        grid_cols = math.ceil(math.sqrt(n_clusters * 1.3))
+        grid_rows = math.ceil(n_clusters / grid_cols)
+        cell_w, cell_h = W / grid_cols, H / grid_rows
+        cell_positions = [(r, c) for r in range(grid_rows) for c in range(grid_cols)]
+        self.rng.shuffle(cell_positions)
 
-        max_len = min(W, H) * self.rng.uniform(0.34, 0.48)
+        for c_idx in range(n_clusters):
+            row, col = cell_positions[c_idx % len(cell_positions)]
+            bx = (col + self.rng.uniform(0.25, 0.75)) * cell_w
+            by = (row + self.rng.uniform(0.25, 0.75)) * cell_h
+            scale = self.rng.uniform(0.5, 1.0) if c_idx > 0 else self.rng.uniform(0.75, 1.0)
+            placed.append((bx, by, scale))
 
-        for i in range(n):
-            t = i / max(1, n - 1)
-            angle = start_angle + t * spread + self.rng.uniform(-0.05, 0.05)
-            length = max_len * self.rng.uniform(0.55, 1.0)
-            width_petal = length * self.rng.uniform(0.14, 0.24)
+            n = petal_count or self.rng.randint(7, 13)
+            spread = self.rng.uniform(math.pi * 0.7, math.pi * 1.4)
+            overall_rot = self.rng.uniform(0, math.tau)
+            start_angle = overall_rot - spread / 2
 
-            self._draw_spore_petal(draw, base_x, base_y, angle, length, width_petal, ss)
+            max_len = min(W, H) * self.rng.uniform(0.20, 0.32) * scale
+
+            for i in range(n):
+                t = i / max(1, n - 1)
+                angle = start_angle + t * spread + self.rng.uniform(-0.05, 0.05)
+                length = max_len * self.rng.uniform(0.55, 1.0)
+                width_petal = length * self.rng.uniform(0.14, 0.24)
+                self._draw_spore_petal(draw, bx, by, angle, length, width_petal, ss)
 
         if ss > 1:
             img = img.resize((self.w, self.h), Image.LANCZOS)
