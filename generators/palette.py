@@ -35,12 +35,39 @@ PALETTES = {
     "sunset_ember":      ("#210A08", "#FF9E5E"),
     "mint_charcoal":     ("#111815", "#9FE6C6"),
     "crimson_paper":     ("#160607", "#F5E6D3"),
+    "peach_blush":       ("#2B1410", "#FFD8C2"),
+    "olive_khaki":       ("#1D1C0C", "#D9CB9E"),
+    "steel_blue":        ("#0C1A24", "#8FB8D6"),
+    "wine_burgundy":     ("#1C0509", "#E8AAB0"),
+    "arctic_teal":       ("#04191B", "#B8F0E6"),
+    "amber_glow":        ("#1E1204", "#FFC24B"),
+    "lavender_grey":     ("#161522", "#D8D3EE"),
+    "copper_rust":       ("#211008", "#D97B4A"),
+    "seafoam_dusk":      ("#0A1F1C", "#A9E4C6"),
+    "graphite_ivory":    ("#161616", "#F2EFE6"),
+    "electric_violet":   ("#0D0620", "#B388FF"),
+    "desert_sand":       ("#241A0D", "#EAC98F"),
+    "midnight_rose":     ("#170A15", "#F2A6C9"),
+    "chartreuse_ink":    ("#0E1204", "#D6F24B"),
+    "slate_lilac":       ("#141220", "#C9BFE8"),
+    "tangerine_smoke":   ("#1D0F06", "#FF9F5B"),
 }
 
 
 def _hex_to_rgb(h: str) -> Tuple[int, int, int]:
     h = h.lstrip("#")
     return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
+
+
+def is_valid_hex(h: str) -> bool:
+    h = h.strip().lstrip("#")
+    if len(h) != 6:
+        return False
+    try:
+        int(h, 16)
+        return True
+    except ValueError:
+        return False
 
 
 def _rgb_to_hex(rgb: Tuple[int, int, int]) -> str:

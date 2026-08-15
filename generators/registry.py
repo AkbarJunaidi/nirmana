@@ -17,6 +17,9 @@ from .advanced_depth import AdvancedDepthGenerator
 from .depth_explorations import DepthExplorationGenerator
 from .radial_motif import RadialMotifGenerator
 from .emotive import EmotiveGenerator
+from .stratum import StratumGenerator
+from .flow_contours import FlowContourGenerator
+from .dot_nirmana import DotNirmanaGenerator
 
 BASE_TECHNIQUE_LABELS = {
     "garis": "Nirmana Garis (Op-Art Flow Distortion)",
@@ -40,6 +43,11 @@ BASE_TECHNIQUE_LABELS = {
     "motif_shapecross": "Motif Radial - Shape Cross",
     "motif_weave": "Motif Radial - Weave Stripes",
     "emosi": "Gestur Emosional - Denyut, Sayat, Simpul (Abstrak Ekspresif)",
+    "sedimen": "Kedalaman - Sedimen (Lapisan Mengendap & Tererosi)",
+    "kekosongan": "Kedalaman - Kekosongan (Tegangan Penuh vs Tiada)",
+    "patahan": "Kedalaman - Patahan (Diskontinuitas & Pergeseran)",
+    "kontur_alir": "Nirmana Garis - Kontur Alir (Paisley/Fingerprint)",
+    "titik": "Nirmana Titik (Halftone Dot Grid)",
 }
 
 # Pengelompokan dipakai oleh composition.py (Mosaik Voronoi butuh kumpulan
@@ -48,7 +56,8 @@ BASE_TECHNIQUE_LABELS = {
 ORGANIC_KEYS = ["organik_burst", "organik_cells", "organik_branching", "lsystem", "parallax"]
 GEOMETRIC_KEYS = ["geometrik_kubus", "geometrik_spiral", "geometrik_grid", "depth_tunnel", "moire", "wireframe"]
 MOTIF_KEYS = ["motif_arrow", "motif_dotx", "motif_shapecross", "motif_weave"]
-MISC_KEYS = ["garis", "depth_shatter", "depth_spiral", "droste", "emosi"]
+MISC_KEYS = ["garis", "depth_shatter", "depth_spiral", "droste", "emosi",
+             "sedimen", "kekosongan", "patahan", "kontur_alir", "titik"]
 # anaglyph sengaja TIDAK dimasukkan ke pool otomatis composition -- warna
 # merah-cyannya adalah konten inti teknik itu sendiri, akan terlihat aneh
 # kalau dipaksa berdampingan acak dengan teknik hitam-putih lain atau
@@ -116,5 +125,18 @@ def render_base_technique(technique: str, w: int, h: int, seed: int):
 
     if technique == "emosi":
         return EmotiveGenerator(w, h, seed=seed).generate()
+
+    if technique == "sedimen":
+        return StratumGenerator(w, h, seed=seed).generate_sedimen()
+    if technique == "kekosongan":
+        return StratumGenerator(w, h, seed=seed).generate_kekosongan()
+    if technique == "patahan":
+        return StratumGenerator(w, h, seed=seed).generate_patahan()
+
+    if technique == "kontur_alir":
+        return FlowContourGenerator(w, h, seed=seed).generate()
+
+    if technique == "titik":
+        return DotNirmanaGenerator(w, h, seed=seed).generate()
 
     raise ValueError(f"Teknik tidak dikenali: {technique}")

@@ -34,7 +34,7 @@ from generators.gallery import build_html_gallery
 from generators.presets import CURATED_PRESETS
 from generators.palette import (
     recolor_duotone, random_palette_name, PALETTES,
-    generate_random_palette,
+    generate_random_palette, is_valid_hex,
 )
 
 ASPECT_RATIOS = {
@@ -68,8 +68,13 @@ TECHNIQUES = {
     "19": "motif_shapecross",
     "20": "motif_weave",
     "21": "emosi",
-    "22": "mosaik_voronoi",
-    "23": "acak",
+    "22": "sedimen",
+    "23": "kekosongan",
+    "24": "patahan",
+    "25": "kontur_alir",
+    "26": "titik",
+    "27": "mosaik_voronoi",
+    "28": "acak",
 }
 
 TECHNIQUE_LABELS = dict(BASE_TECHNIQUE_LABELS)
@@ -145,8 +150,10 @@ def main():
             print(f"  {i}. {k}")
         idx_acak_satu = len(palette_keys) + 1
         idx_acak_tiap = len(palette_keys) + 2
+        idx_custom = len(palette_keys) + 3
         print(f"  {idx_acak_satu}. ACAK -- satu kombinasi warna acak (harmonis) dipakai untuk semua karya")
         print(f"  {idx_acak_tiap}. ACAK -- kombinasi warna acak BERBEDA setiap karya")
+        print(f"  {idx_custom}. CUSTOM -- masukkan kode warna HEX sendiri")
         palet_input = input("Masukkan pilihan [Default: 0]: ").strip()
 
         mode_warna = "palette"
@@ -161,6 +168,19 @@ def main():
                 print(f"    -> Warna acak terpilih: dark={warna_acak_tetap[0]}  light={warna_acak_tetap[1]}")
             elif n == idx_acak_tiap:
                 mode_warna = "acak_tiap"
+            elif n == idx_custom:
+                mode_warna = "acak_satu"
+                dark_in = input("    Kode warna GELAP (hex, mis. #1A1A2E): ").strip()
+                light_in = input("    Kode warna TERANG (hex, mis. #F5F0E6): ").strip()
+                if not is_valid_hex(dark_in):
+                    print("    Kode gelap tidak valid, pakai default #0A0A0A")
+                    dark_in = "#0A0A0A"
+                if not is_valid_hex(light_in):
+                    print("    Kode terang tidak valid, pakai default #FAFAFA")
+                    light_in = "#FAFAFA"
+                warna_acak_tetap = (dark_in if dark_in.startswith("#") else f"#{dark_in}",
+                                     light_in if light_in.startswith("#") else f"#{light_in}")
+                print(f"    -> Warna custom: dark={warna_acak_tetap[0]}  light={warna_acak_tetap[1]}")
 
         if mode_warna == "palette" and palet_terpilih == "hitam_putih":
             mode_warna = "hitam_putih"

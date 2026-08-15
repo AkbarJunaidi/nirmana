@@ -8,6 +8,9 @@ from .advanced_depth import AdvancedDepthGenerator
 from .depth_explorations import DepthExplorationGenerator
 from .radial_motif import RadialMotifGenerator
 from .emotive import EmotiveGenerator
+from .stratum import StratumGenerator
+from .flow_contours import FlowContourGenerator
+from .dot_nirmana import DotNirmanaGenerator
 from .registry import render_base_technique, BASE_TECHNIQUE_LABELS, ALL_BASE_KEYS
 from .quality import generate_best_of
 from .gallery import build_html_gallery
@@ -24,6 +27,9 @@ __all__ = [
     "DepthExplorationGenerator",
     "RadialMotifGenerator",
     "EmotiveGenerator",
+    "StratumGenerator",
+    "FlowContourGenerator",
+    "DotNirmanaGenerator",
     "render_base_technique", "BASE_TECHNIQUE_LABELS", "ALL_BASE_KEYS",
     "generate_best_of",
     "build_html_gallery",
