@@ -188,7 +188,7 @@ def main():
     if mode_warna == "acak_satu" and warna_acak_tetap is None:
         warna_acak_tetap = generate_random_palette(seed=random.randint(0, 10 ** 9))
 
-    # 3. Jumlah karya
+    # 3. Jumlah karyaaaaa hiyah
     try:
         jumlah = int(input("\nJumlah karya unik yang ingin di-generate [Default: 3]: ").strip())
     except ValueError:
