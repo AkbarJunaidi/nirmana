@@ -203,7 +203,7 @@ def main():
     try:
         n_candidates = max(1, int(qa_input))
     except ValueError:
-        n_candidates = 3
+        n_candidates = 1
 
     print(f"\n[Info] Memulai generative pipeline: {jumlah} karya | {label_rasio} | "
           f"{TECHNIQUE_LABELS.get(teknik_terpilih, 'Acak per karya')} | "
