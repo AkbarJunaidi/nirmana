@@ -30,6 +30,8 @@ from typing import List, Tuple
 import numpy as np
 from PIL import Image, ImageDraw, ImageFilter
 
+from .precision import draw_precise_polyline
+
 
 class StratumGenerator:
     def __init__(self, width: int, height: int, seed: int = None):
@@ -143,7 +145,7 @@ class StratumGenerator:
             y += H * self.rng.uniform(0.02, 0.05)
             x += self.rng.uniform(-W * 0.02, W * 0.02)
             pts.append((x, y))
-        draw.line(pts, fill=(col, col, col), width=max(1, int(min(W, H) * 0.0015)))
+        draw_precise_polyline(draw, pts, (col, col, col), max(1, int(min(W, H) * 0.0015)))
 
     # ------------------------------------------------------------------
     # 2. KEKOSONGAN -- tekstur padat dilubangi rongga organik
@@ -267,7 +269,7 @@ class StratumGenerator:
             width = max(1, int(ss * self.rng.uniform(1.0, 2.2)))
             jitter_pts = [(fx + self.rng.uniform(-W * 0.004, W * 0.004), y)
                           for y in np.linspace(0, H, 20)]
-            draw.line(jitter_pts, fill=(15, 15, 15), width=width)
+            draw_precise_polyline(draw, jitter_pts, (15, 15, 15), width)
 
         if ss > 1:
             canvas = canvas.resize((self.w, self.h), Image.LANCZOS)

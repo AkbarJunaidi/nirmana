@@ -20,6 +20,8 @@ import random
 import numpy as np
 from PIL import Image, ImageDraw
 
+from .precision import draw_precise_polyline, circle_points
+
 
 class OrganicNirmanaGenerator:
     def __init__(self, width: int, height: int, seed: int = None):
@@ -167,14 +169,13 @@ class OrganicNirmanaGenerator:
 
         for ring_i in range(n_rings, 0, -1):
             ring_r = r * (ring_i / n_rings)
-            pts = []
-            steps = 40
-            for k in range(steps + 1):
-                th = (k / steps) * math.tau
-                wobble = math.sin(th * wobble_freq + phase) * wobble_amp * (ring_i / n_rings)
-                rr = ring_r + wobble
-                pts.append((cx + rr * math.cos(th), cy + rr * math.sin(th)))
-            draw.line(pts, fill=0, width=max(1, int(1.4 * ss)))
+            # wobble_freq dibulatkan ke integer agar sin(0) == sin(tau*freq):
+            # loop menutup persis tanpa jahitan, berapapun radiusnya.
+            freq_int = max(3, round(wobble_freq))
+            pts = circle_points(cx, cy, ring_r,
+                                 wobble_amp=wobble_amp * (ring_i / n_rings),
+                                 wobble_freq=freq_int, phase=phase)
+            draw_precise_polyline(draw, pts, fill=0, width=max(1, int(1.4 * ss)), closed=True)
         # titik pusat kecil
         cr = max(1, int(1.6 * ss))
         draw.ellipse([cx - cr, cy - cr, cx + cr, cy + cr], fill=0)

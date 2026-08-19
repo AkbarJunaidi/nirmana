@@ -18,6 +18,7 @@ import numpy as np
 from PIL import Image, ImageDraw
 
 from .flowfield import WarpField
+from .precision import draw_precise_polygon_outline, circle_points
 
 
 class GeometricNirmanaGenerator:
@@ -63,9 +64,16 @@ class GeometricNirmanaGenerator:
                 left = [(cx - dx, cy - dy), (cx, cy), (cx, cy + s), (cx - dx, cy + dy)]
                 right = [(cx + dx, cy - dy), (cx, cy), (cx, cy + s), (cx + dx, cy + dy)]
 
-                draw.polygon(top, fill=light, outline=(0, 0, 0), width=max(1, ss))
-                draw.polygon(left, fill=mid, outline=(0, 0, 0), width=max(1, ss))
-                draw.polygon(right, fill=dark, outline=(0, 0, 0), width=max(1, ss))
+                draw.polygon(top, fill=light)
+                draw.polygon(left, fill=mid)
+                draw.polygon(right, fill=dark)
+                # Outline presisi: draw.polygon(outline=..) bawaan Pillow tidak
+                # menutup celah di tiap simpul saat width > 1 -- di sini setiap
+                # simpul rusuk kubus ditambal dab supaya sambungan selalu rapat.
+                ow = max(1, ss)
+                draw_precise_polygon_outline(draw, top, (0, 0, 0), ow)
+                draw_precise_polygon_outline(draw, left, (0, 0, 0), ow)
+                draw_precise_polygon_outline(draw, right, (0, 0, 0), ow)
 
         if ss > 1:
             img = img.resize((self.w, self.h), Image.LANCZOS)
@@ -75,8 +83,14 @@ class GeometricNirmanaGenerator:
     # 2. SPIRAL CHECKERBOARD (ilusi optik polar remap)
     # ------------------------------------------------------------------
     def generate_spiral_checkerboard(self, rings: int = None, sectors: int = None,
-                                      spiral_amount: float = None) -> Image.Image:
-        W, H = self.w, self.h
+                                      spiral_amount: float = None,
+                                      supersample: int = 2) -> Image.Image:
+        # Supersample + edge anti-alias: tepi ring/sektor dihitung sebagai
+        # implicit function pada resolusi tinggi lalu di-downsample dengan
+        # filter Lanczos, supaya batas polar tetap tajam & presisi (bukan
+        # bergerigi/aliased) walau dicetak besar.
+        ss = max(1, supersample)
+        W, H = self.w * ss, self.h * ss
         cx, cy = W / 2, H / 2
 
         xs = np.arange(W, dtype=np.float64)
@@ -103,6 +117,8 @@ class GeometricNirmanaGenerator:
         gray = np.where(checker > 0.5, 255, 0).astype(np.uint8)
 
         img = Image.fromarray(gray, mode="L").convert("RGB")
+        if ss > 1:
+            img = img.resize((self.w, self.h), Image.LANCZOS)
         return img
 
     # ------------------------------------------------------------------

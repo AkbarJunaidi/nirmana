@@ -37,13 +37,24 @@ from generators.palette import (
     generate_random_palette, is_valid_hex,
 )
 
+
+# Setiap preset resolusi juga membawa metadata DPI yang PRESISI secara
+# fisik (bukan cuma jumlah piksel) -- supaya file yang sama, saat dibuka di
+# software cetak (InDesign, Illustrator, print shop) maupun media digital
+# (Instagram, web, presentasi), selalu terbaca ukuran fisik yang benar.
+# dpi=None berarti "murni digital" (tidak ada ukuran fisik yang relevan,
+# software akan default 72/96 dpi -- itu sudah benar untuk layar).
 ASPECT_RATIOS = {
-    "1": ("1:1 (Instagram Post)", (1600, 1600)),
-    "2": ("4:5 (Feed Sosmed)", (1350, 1687)),
-    "3": ("9:16 (Story/Reels)", (1080, 1920)),
-    "4": ("16:9 (Landscape/Banner)", (1920, 1080)),
-    "5": ("A4 Potrait (Cetak 300 DPI)", (2480, 3508)),
-    "6": ("4K Ultra HD", (3840, 2160)),
+    "1": ("1:1 (Instagram Post)", (1600, 1600), None),
+    "2": ("4:5 (Feed Sosmed)", (1350, 1687), None),
+    "3": ("9:16 (Story/Reels)", (1080, 1920), None),
+    "4": ("16:9 (Landscape/Banner)", (1920, 1080), None),
+    "5": ("A4 Potrait (Cetak 300 DPI, 21x29.7cm)", (2480, 3508), (300, 300)),
+    "6": ("A3 Potrait (Cetak 300 DPI, 29.7x42cm)", (3508, 4961), (300, 300)),
+    "7": ("Kartu Nama (Cetak 300 DPI + bleed, 9.4x5.5cm)", (1110, 650), (300, 300)),
+    "8": ("Poster Besar (150 DPI, 60x90cm)", (3543, 5315), (150, 150)),
+    "9": ("Kanvas Persegi Cetak (300 DPI, 40x40cm)", (4724, 4724), (300, 300)),
+    "10": ("4K Ultra HD (Layar/Wallpaper)", (3840, 2160), None),
 }
 
 TECHNIQUES = {
@@ -73,8 +84,11 @@ TECHNIQUES = {
     "24": "patahan",
     "25": "kontur_alir",
     "26": "titik",
-    "27": "mosaik_voronoi",
-    "28": "acak",
+    "27": "hierarki_paralel",
+    "28": "hierarki_konsentris",
+    "29": "hierarki_radial",
+    "30": "mosaik_voronoi",
+    "31": "acak",
 }
 
 TECHNIQUE_LABELS = dict(BASE_TECHNIQUE_LABELS)
@@ -111,7 +125,7 @@ def main():
 
     # 1. Rasio & Resolusi
     rasio_key = pilih("\nPilih Rasio & Resolusi:", ASPECT_RATIOS, "1")
-    label_rasio, (W, H) = ASPECT_RATIOS[rasio_key]
+    label_rasio, (W, H), dpi_meta = ASPECT_RATIOS[rasio_key]
 
     # 2. Mode Cepat (preset kurasi) atau Mode Manual
     print("\nMode Cepat -- kombinasi teknik+warna yang sudah dikurasi (langsung bagus):")
@@ -248,7 +262,12 @@ def main():
 
         nama_file = f"nirmana_{technique}_{rasio_key}_{i}_seed{seed}.png"
         path = os.path.join("outputs", nama_file)
-        img.save(path, quality=95)
+        # dpi_meta ditanam sebagai metadata fisik PNG (pHYs chunk) -- kalau
+        # None (preset digital murni), tidak usah dipaksa, biarkan default.
+        if dpi_meta:
+            img.save(path, dpi=dpi_meta)
+        else:
+            img.save(path)
 
         dt = time.time() - t0
         print(f"    -> Tersimpan: {path} ({dt:.2f}s)\n")

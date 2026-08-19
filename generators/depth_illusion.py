@@ -26,6 +26,8 @@ from typing import Tuple
 import numpy as np
 from PIL import Image, ImageDraw
 
+from .precision import draw_precise_polyline, draw_precise_polygon_outline, circle_points
+
 
 class DepthIllusionGenerator:
     def __init__(self, width: int, height: int, seed: int = None):
@@ -75,7 +77,7 @@ class DepthIllusionGenerator:
             scale *= growth
 
         for rect in frame_pts:
-            draw.polygon(rect, outline=0, width=max(1, ss))
+            draw_precise_polygon_outline(draw, rect, 0, max(1, ss))
 
         # --- Isi band antar-frame berselang-seling dengan pola berbeda
         #     supaya terasa gradasi cahaya seperti lorong (dekat VP lebih
@@ -171,7 +173,7 @@ class DepthIllusionGenerator:
                     jitter_ang = ang + self.rng.uniform(-0.05, 0.05) * (1 - t)
                     r = reach * t
                     pts.append((icx + r * math.cos(jitter_ang), icy + r * math.sin(jitter_ang)))
-                draw.line(pts, fill=(15, 15, 15), width=line_w)
+                draw_precise_polyline(draw, pts, (15, 15, 15), line_w)
                 crack_endpoints.append(pts[-1])
 
             # cincin retak konsentris (patah-patah, tidak menutup penuh)
@@ -190,10 +192,10 @@ class DepthIllusionGenerator:
                         pts.append((icx + wob * math.cos(a), icy + wob * math.sin(a)))
                     else:
                         if len(pts) > 1:
-                            draw.line(pts, fill=(15, 15, 15), width=max(1, line_w - ss // 2))
+                            draw_precise_polyline(draw, pts, (15, 15, 15), max(1, line_w - ss // 2))
                         pts = []
                 if len(pts) > 1:
-                    draw.line(pts, fill=(15, 15, 15), width=max(1, line_w - ss // 2))
+                    draw_precise_polyline(draw, pts, (15, 15, 15), max(1, line_w - ss // 2))
 
         # Flood-fill sebagian sel yang terbentuk jadi hitam pekat (efek
         # "closure" -- mata membaca bidang tertutup sebagai solid)

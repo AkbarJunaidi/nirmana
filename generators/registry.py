@@ -20,6 +20,7 @@ from .emotive import EmotiveGenerator
 from .stratum import StratumGenerator
 from .flow_contours import FlowContourGenerator
 from .dot_nirmana import DotNirmanaGenerator
+from .line_hierarchy import LineHierarchyGenerator
 
 BASE_TECHNIQUE_LABELS = {
     "garis": "Nirmana Garis (Op-Art Flow Distortion)",
@@ -48,6 +49,9 @@ BASE_TECHNIQUE_LABELS = {
     "patahan": "Kedalaman - Patahan (Diskontinuitas & Pergeseran)",
     "kontur_alir": "Nirmana Garis - Kontur Alir (Paisley/Fingerprint)",
     "titik": "Nirmana Titik (Halftone Dot Grid)",
+    "hierarki_paralel": "Garis Tebal-Tipis - Keluarga Paralel (Uji Skala Ketebalan)",
+    "hierarki_konsentris": "Garis Tebal-Tipis - Cincin Konsentris Presisi (Meruncing)",
+    "hierarki_radial": "Garis Tebal-Tipis - Jari-jari Meruncing x Busur",
 }
 
 # Pengelompokan dipakai oleh composition.py (Mosaik Voronoi butuh kumpulan
@@ -57,7 +61,8 @@ ORGANIC_KEYS = ["organik_burst", "organik_cells", "organik_branching", "lsystem"
 GEOMETRIC_KEYS = ["geometrik_kubus", "geometrik_spiral", "geometrik_grid", "depth_tunnel", "moire", "wireframe"]
 MOTIF_KEYS = ["motif_arrow", "motif_dotx", "motif_shapecross", "motif_weave"]
 MISC_KEYS = ["garis", "depth_shatter", "depth_spiral", "droste", "emosi",
-             "sedimen", "kekosongan", "patahan", "kontur_alir", "titik"]
+             "sedimen", "kekosongan", "patahan", "kontur_alir", "titik",
+             "hierarki_paralel", "hierarki_konsentris", "hierarki_radial"]
 # anaglyph sengaja TIDAK dimasukkan ke pool otomatis composition -- warna
 # merah-cyannya adalah konten inti teknik itu sendiri, akan terlihat aneh
 # kalau dipaksa berdampingan acak dengan teknik hitam-putih lain atau
@@ -138,5 +143,12 @@ def render_base_technique(technique: str, w: int, h: int, seed: int):
 
     if technique == "titik":
         return DotNirmanaGenerator(w, h, seed=seed).generate()
+
+    if technique == "hierarki_paralel":
+        return LineHierarchyGenerator(w, h, seed=seed).generate_parallel_families()
+    if technique == "hierarki_konsentris":
+        return LineHierarchyGenerator(w, h, seed=seed).generate_concentric_taper()
+    if technique == "hierarki_radial":
+        return LineHierarchyGenerator(w, h, seed=seed).generate_radial_taper()
 
     raise ValueError(f"Teknik tidak dikenali: {technique}")

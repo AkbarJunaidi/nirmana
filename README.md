@@ -116,7 +116,7 @@ mekanisme kedalaman yang genuinely berbeda:
   gelap & besar di depan, elemen jauh terang & kecil di belakang — cara
   paling primal otak manusia membaca kedalaman lewat oklusi.
 
-### 8. Gestur Emosional (Abstrak Ekspresif -- Tanpa Objek, Tanpa Makna)
+### 7. Gestur Emosional (Abstrak Ekspresif -- Tanpa Objek, Tanpa Makna)
 `generators/emotive.py`
 
 > *"Nirmana adalah jeritan sunyi yang terperangkap di antara persimpangan
@@ -142,6 +142,28 @@ Tiga elemen dikomposisikan bersama:
 Semua elemen dikomposit dengan alpha blending (bukan flat fill) di atas
 wash tonal sangat halus, sehingga persilangan goresan menumpuk jadi lebih
 gelap secara alami -- seperti tinta asli yang menyerap berulang di kertas.
+
+### 8. Garis Tebal-Tipis (Line Weight Hierarchy) — Uji Presisi Desainer [BARU]
+`generators/line_hierarchy.py`
+
+Tugas paling klasik di studio DKV: membangun *value* (gelap-terang) dan
+ritme komposisi semata-mata dari tebal-tipis garis dan jarak antar-garis —
+tanpa bidang isi, tanpa tekstur, tanpa objek. Dipakai dosen/art director
+untuk menilai jam terbang mata seorang desainer: konsistensi skala
+ketebalan, presisi spasi, kontrol lengkung, dan keseimbangan komposisi.
+
+- **Parallel Families** — beberapa "keluarga" garis nyaris tegak, tiap
+  keluarga dikunci ke satu zona kolom kanvas dengan tangga ketebalan
+  geometris bertahap (bukan linear, supaya kontras antar-tingkat lebih
+  tegas) dan spasi presisi eksak, sehingga hierarki tiap keluarga tetap
+  terbaca jelas — tidak lebur jadi anyaman kacau lintas-keluarga.
+- **Concentric Taper** — cincin-cincin konsentris presisi dengan ketebalan
+  meruncing dari pusat ke tepi (atau sebaliknya); showcase langsung dari
+  jaminan "garis pada lingkaran selalu tersambung mulus, setipis atau
+  setebal apapun".
+- **Radial Taper** — jari-jari dari titik pusat dengan ketebalan meruncing
+  terhadap jarak, disilang beberapa busur konsentris tipis — melatih
+  presisi perpotongan garis lurus × lengkung.
 
 ### 9. Motif Radial (Repetisi & Simetri Klasik)
 `generators/radial_motif.py`
@@ -182,6 +204,57 @@ Tiga mode dipilih lewat CLI:
    kontras & keserasian tetap terjaga. Tersedia sebagai "satu warna acak
    untuk semua karya" atau "acak berbeda tiap karya" dalam satu batch.
 
+## Sistem Presisi (Anti-Patahan) & Kesiapan Cetak/Digital
+
+### `precision.py` — jaminan garis & lengkung selalu tersambung mulus
+
+Akar masalah teknis "garis pada lingkaran/poligon yang patah" bukan cuma
+soal jumlah titik sampel, tapi bug rendering nyata di Pillow:
+
+- `ImageDraw.line(pts, width>1)` tidak mengisi sudut sambungan antar-segmen
+  dengan mulus kalau sudutnya tajam (lingkaran ber-wobble, garis
+  bergerigi, dsb) — muncul celah segitiga kecil di tiap sambungan.
+- `ImageDraw.polygon(outline=.., width>1)` bahkan **tidak mengisi sama
+  sekali** sudut simpul poligon — jadi tessellasi kubus isometrik, frame
+  lorong perspektif, dsb selalu bercelah kalau outline-nya tebal.
+
+`draw_precise_polyline()` menambal tiap titik sambungan dengan "dab" bundar
+seukuran lebar garis (setara *round-join* di software vektor) — solusi ini
+menutup celah untuk sudut setajam apapun, di skala resolusi berapapun.
+`circle_points()` menghasilkan titik lingkaran dengan kerapatan sampel
+ADAPTIF terhadap radius (makin besar radius/makin besar file cetak, makin
+rapat sampelnya) dan menjamin titik awal = titik akhir persis (tanpa
+jahitan 1px di titik penutupan). Dipakai di semua teknik yang menggambar
+cincin/poligon tebal: `organic_patterns.py`, `geometric_patterns.py`,
+`depth_illusion.py`, `stratum.py`, `line_hierarchy.py`.
+
+### DPI presisi fisik untuk segala media
+
+Preset resolusi (`main.py: ASPECT_RATIOS`) sekarang membawa metadata DPI
+yang benar secara fisik, bukan cuma jumlah piksel -- ditanam ke chunk pHYs
+file PNG saat disimpan, supaya file yang sama terbaca ukuran fisik yang
+tepat baik dibuka di software cetak (InDesign/Illustrator/percetakan)
+maupun dipakai di media digital (Instagram, web, presentasi):
+
+| Preset | Ukuran piksel | DPI | Ukuran fisik |
+|---|---|---|---|
+| 1:1 Instagram Post | 1600×1600 | digital (72/96) | — |
+| 4:5 Feed Sosmed | 1350×1687 | digital | — |
+| 9:16 Story/Reels | 1080×1920 | digital | — |
+| 16:9 Landscape/Banner | 1920×1080 | digital | — |
+| A4 Potrait | 2480×3508 | 300 | 21 × 29.7 cm |
+| A3 Potrait | 3508×4961 | 300 | 29.7 × 42 cm |
+| Kartu Nama (+bleed) | 1110×650 | 300 | 9.4 × 5.5 cm |
+| Poster Besar | 3543×5315 | 150 | 60 × 90 cm |
+| Kanvas Cetak Persegi | 4724×4724 | 300 | 40 × 40 cm |
+| 4K Ultra HD | 3840×2160 | digital | layar/wallpaper |
+
+Preset digital sengaja tidak dipaksa DPI tertentu (biar software default
+72/96 dpi -- itu memang benar untuk layar), sementara semua preset cetak
+memakai DPI industri standar (300 untuk cetak detail/kartu nama/kanvas,
+150 untuk format poster besar supaya ukuran file tetap wajar tanpa
+mengorbankan ketajaman baca dari jarak pandang normal).
+
 ### Infrastruktur "Masterpiece" (Registry, Quality Evaluator, Galeri, Preset)
 
 - **`registry.py`** — satu sumber kebenaran untuk semua teknik dasar.
@@ -210,20 +283,25 @@ Tiga mode dipilih lewat CLI:
 nirmana/
 ├── main.py                       # CLI orchestrator
 ├── generators/
-│   ├── flowfield.py              # Mesin distorsi vortex (dipakai bersama)
+│   ├── flowfield.py               # Mesin distorsi vortex (dipakai bersama)
+│   ├── precision.py               # [BARU] Jaminan garis/lengkung anti-patahan (dipakai bersama)
 │   ├── line_nirmana.py           # Teknik 1: Nirmana Garis
 │   ├── organic_patterns.py       # Teknik 2: Nirmana Organik (3 varian)
 │   ├── geometric_patterns.py     # Teknik 3: Nirmana Geometrik (3 varian)
 │   ├── depth_illusion.py         # Teknik 4: Depth Illusion (3 varian)
 │   ├── advanced_depth.py         # Teknik 5: Advanced Depth (3 varian)
 │   ├── depth_explorations.py     # Teknik 6: Depth Exploration (3 varian)
-│   ├── radial_motif.py           # Teknik 7: Motif Radial (4 varian)
-│   ├── emotive.py                # Teknik 8: Gestur Emosional (abstrak ekspresif)
-│   ├── composition.py            # Teknik 9: Mosaik Voronoi
+│   ├── emotive.py                # Teknik 7: Gestur Emosional (abstrak ekspresif)
+│   ├── line_hierarchy.py         # [BARU] Teknik 8: Garis Tebal-Tipis (3 varian)
+│   ├── radial_motif.py           # Teknik 9: Motif Radial (4 varian)
+│   ├── composition.py            # Teknik 10: Mosaik Voronoi
+│   ├── stratum.py                # Sedimen / Kekosongan / Patahan (kedalaman formal)
+│   ├── flow_contours.py          # Kontur Alir (paisley/fingerprint)
+│   ├── dot_nirmana.py            # Nirmana Titik (halftone dot grid)
 │   ├── registry.py               # Satu sumber kebenaran semua teknik dasar
 │   ├── quality.py                # Evaluator kualitas & best-of-N sampling
 │   ├── gallery.py                # Generator galeri HTML kontak-sheet
-│   ├── presets.py                # 14 preset kurasi teknik+warna siap pakai
+│   ├── presets.py                # Preset kurasi teknik+warna siap pakai
 │   └── palette.py                # Palet kurasi + generator warna acak
 └── outputs/                      # Hasil render + galeri.html (dibuat otomatis)
 ```

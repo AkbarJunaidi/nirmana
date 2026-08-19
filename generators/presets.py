@@ -169,4 +169,18 @@ CURATED_PRESETS = {
         palette_mode="hitam_putih",
         palette_name=None,
     ),
+    "22": Preset(
+        label="Uji Skala Ketebalan",
+        description="Garis Tebal-Tipis (keluarga paralel) hitam-putih -- tugas klasik uji presisi & ritme.",
+        technique="hierarki_paralel",
+        palette_mode="hitam_putih",
+        palette_name=None,
+    ),
+    "23": Preset(
+        label="Cincin Presisi Meruncing",
+        description="Garis Tebal-Tipis (konsentris) dengan nuansa monokrom slate -- showcase sambungan mulus.",
+        technique="hierarki_konsentris",
+        palette_mode="palette",
+        palette_name="monochrome_slate",
+    ),
 }
