@@ -66,14 +66,40 @@ class VoronoiMosaic:
             assigned.append(technique)
             last = technique
 
-        # 4. Render tiap teknik di resolusi kerja, komposit sesuai region_id
+        # 4. Render tiap teknik PAS DI UKURAN SEL-NYA SENDIRI (bounding box
+        #    region tersebut), baru dikomposit -- bukan me-render teknik di
+        #    ukuran KANVAS PENUH lalu dipotong sesuai sel. Cara lama itu
+        #    salah: banyak teknik nirmana punya komposisi yang sengaja
+        #    dipusatkan (bola, ledakan radial, motif tengah) -- kalau
+        #    dirender penuh-kanvas lalu dipotong ke sel yang jauh dari
+        #    tengah, yang muncul cuma POTONGAN ACAK (mis. separuh bola,
+        #    sepotong motif) yang terlihat berantakan & tidak proporsional.
+        #    Dengan merender pas di bounding box sel, tiap teknik tetap
+        #    utuh & terpusat proporsional di dalam sel masing-masing --
+        #    hasilnya jauh lebih rapi dan "sengaja", bukan tabrakan acak.
         canvas = np.zeros((wh, ww, 3), dtype=np.uint8)
+        min_cell_dim = max(24, int(min(ww, wh) * 0.05))
         for i, technique in enumerate(assigned):
+            mask_full = region_id == i
+            rows = np.any(mask_full, axis=1)
+            cols = np.any(mask_full, axis=0)
+            if not rows.any():
+                continue
+            r0, r1 = np.where(rows)[0][[0, -1]]
+            c0, c1 = np.where(cols)[0][[0, -1]]
+            cell_h = max(min_cell_dim, int(r1 - r0 + 1))
+            cell_w = max(min_cell_dim, int(c1 - c0 + 1))
+
             sub_seed = self.seed + i * 6221
-            layer = render_technique_swatch(technique, ww, wh, sub_seed)
+            layer = render_technique_swatch(technique, cell_w, cell_h, sub_seed)
             layer_arr = np.asarray(layer.convert("RGB"))
-            mask = region_id == i
-            canvas[mask] = layer_arr[mask]
+            # Tempel tepat di bounding box sel (bisa sedikit melebihi kalau
+            # cell_h/cell_w dinaikkan ke minimum -- diklip supaya tetap pas)
+            ph, pw = layer_arr.shape[0], layer_arr.shape[1]
+            r_end = min(wh, r0 + ph)
+            c_end = min(ww, c0 + pw)
+            sub_mask = mask_full[r0:r_end, c0:c_end]
+            canvas[r0:r_end, c0:c_end][sub_mask] = layer_arr[:r_end - r0, :c_end - c0][sub_mask]
 
         img = Image.fromarray(canvas, mode="RGB")
 

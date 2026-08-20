@@ -228,11 +228,29 @@ def main():
     base_seed = random.randint(1, 999999)
     gallery_entries = []
 
+    # Sistem "acak" pakai SHUFFLE BAG (sampling tanpa pengembalian), bukan
+    # random.choice() independen tiap karya -- random.choice() independen
+    # rawan memilih teknik yang SAMA berkali-kali dalam satu batch pendek
+    # (soal probabilitas murni: dengan ~30 teknik & batch 5 karya, peluang
+    # ada duplikat > 25%). Shuffle bag menjamin semua teknik terpakai
+    # merata dulu satu-satu (urutan diacak) sebelum ada yang terulang --
+    # itulah "benar-benar acak" yang terasa adil buat mata, bukan acak
+    # matematis independen yang secara persepsi terasa "kok itu-itu lagi".
+    acak_rng = random.Random(base_seed)
+    acak_bag: list = []
+
+    def ambil_teknik_acak() -> str:
+        nonlocal acak_bag
+        if not acak_bag:
+            acak_bag = list(ALL_BASE_KEYS)
+            acak_rng.shuffle(acak_bag)
+        return acak_bag.pop()
+
     for i in range(1, jumlah + 1):
-        seed = base_seed + i * 7919
+        seed = acak_rng.randint(1, 10 ** 9) if teknik_terpilih == "acak" else base_seed + i * 7919
 
         if teknik_terpilih == "acak":
-            technique = random.Random(seed).choice(list(BASE_TECHNIQUE_LABELS.keys()))
+            technique = ambil_teknik_acak()
         else:
             technique = teknik_terpilih
 

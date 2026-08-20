@@ -45,7 +45,13 @@ class RadialMotifGenerator:
 
         cx, cy = W / 2, H / 2
         n_arms = n_arms or self.rng.choice([4, 6, 8])
-        max_r = min(W, H) * 0.47
+        # max_r sebelumnya dipatok ke SISI TERPENDEK (min(W,H)*0.47) --
+        # itu artinya panah tak pernah bisa menjangkau sudut kanvas (jarak
+        # ke sudut = setengah DIAGONAL, ~1.4x lebih jauh dari setengah sisi
+        # pendek), jadi keempat sudut selalu kosong. Sekarang dipatok ke
+        # setengah diagonal (sedikit dilebihkan supaya ujung panah bleed
+        # keluar tepi kanvas) -- full-bleed di rasio aspek berapapun.
+        max_r = math.hypot(W, H) * 0.54
         start_r = min(W, H) * 0.09
 
         base_angle = self.rng.uniform(0, math.tau / n_arms)
@@ -68,7 +74,12 @@ class RadialMotifGenerator:
     def _draw_arrow_segmented(self, draw, cx, cy, angle, r0, r1, ss):
         """Satu 'panah' tersusun dari beberapa segmen trapesium yang
         mengecil menjauhi pusat, diakhiri kepala panah (segitiga)."""
-        n_seg = self.rng.randint(4, 6)
+        # Jumlah segmen diskalakan terhadap panjang panah (r1-r0) supaya
+        # kepadatan visual tetap konsisten walau max_r kini jauh lebih
+        # panjang (menjangkau sudut) -- bukan cuma memanjangkan tiap
+        # segmen jadi jarang.
+        length_ratio = max(1.0, (r1 - r0) / (min(r1, r0 + 1) * 3))
+        n_seg = self.rng.randint(4, 6) + int(length_ratio)
         ca, sa = math.cos(angle), math.sin(angle)
         perp = (-sa, ca)
         seg_len = (r1 - r0) / (n_seg + 1)
@@ -103,8 +114,14 @@ class RadialMotifGenerator:
         draw = ImageDraw.Draw(img)
 
         cx, cy = W / 2, H / 2
-        max_r = min(W, H) * 0.46
-        n_per_arm = n_per_arm or self.rng.randint(9, 13)
+        # Sama seperti arrow_burst: dipatok ke setengah diagonal (bukan
+        # sisi terpendek) supaya deretan lingkaran benar-benar menjangkau
+        # sudut kanvas -- full-bleed di rasio berapapun.
+        max_r = math.hypot(W, H) * 0.53
+        # n_per_arm diskalakan mengikuti pertambahan panjang lengan supaya
+        # jarak antar-titik tetap rapat/konsisten (bukan jadi renggang).
+        length_scale = max_r / (min(W, H) * 0.46)
+        n_per_arm = n_per_arm or int(self.rng.randint(9, 13) * length_scale)
         n_diag = self.rng.choice([2, 4])  # 2 = satu garis X penuh, 4 = X + tambahan tegak/datar
 
         max_dot_r = min(W, H) * self.rng.uniform(0.028, 0.042)
@@ -143,7 +160,7 @@ class RadialMotifGenerator:
     # ------------------------------------------------------------------
     # 3. SHAPE CROSS (bentuk geometris berselang-seling menyilang)
     # ------------------------------------------------------------------
-    def generate_shape_cross(self, n_arms: int = 4, n_per_arm: int = None,
+    def generate_shape_cross(self, n_arms: int = None, n_per_arm: int = None,
                               supersample: int = 2) -> Image.Image:
         ss = supersample
         W, H = self.w * ss, self.h * ss
@@ -151,8 +168,12 @@ class RadialMotifGenerator:
         draw = ImageDraw.Draw(img)
 
         cx, cy = W / 2, H / 2
-        max_r = min(W, H) * 0.46
-        n_per_arm = n_per_arm or self.rng.randint(4, 6)
+        n_arms = n_arms or self.rng.choice([4, 5, 6])
+        # Sama seperti dua teknik di atas: dipatok ke setengah diagonal
+        # supaya lengan-lengan benar-benar menjangkau sudut kanvas.
+        max_r = math.hypot(W, H) * 0.53
+        length_scale = max_r / (min(W, H) * 0.46)
+        n_per_arm = n_per_arm or int(self.rng.randint(5, 7) * length_scale)
         shapes = ["triangle", "square", "circle"]
         self.rng.shuffle(shapes)
 
@@ -161,21 +182,49 @@ class RadialMotifGenerator:
             angle = base_angle + i * (math.tau / n_arms)
             self._draw_shape_arm(draw, cx, cy, angle, max_r, n_per_arm, shapes, ss)
 
+        # Lengan sekunder di antara lengan utama (offset setengah sudut),
+        # bentuk lebih kecil -- mengisi celah kosong antar-lengan supaya
+        # komposisi terasa penuh & seimbang, bukan cuma beberapa sulur
+        # kurus yang menyisakan banyak ruang kosong di antaranya.
+        n_minor = max(3, int(n_per_arm * 0.55))
+        for i in range(n_arms):
+            angle = base_angle + (i + 0.5) * (math.tau / n_arms)
+            self._draw_shape_arm(draw, cx, cy, angle, max_r * 0.75, n_minor, shapes, ss,
+                                  size_mult=0.48)
+
+        # Lengan tersier lebih halus lagi di antara lengan sekunder --
+        # lapisan ketiga ini membuat kepadatan meluruh mulus dari pusat ke
+        # tepi tanpa "pita kosong" yang terasa antara lengan utama & minor.
+        n_tersier = max(2, int(n_per_arm * 0.3))
+        for i in range(n_arms * 2):
+            angle = base_angle + (i + 0.25) * (math.tau / (n_arms * 2))
+            self._draw_shape_arm(draw, cx, cy, angle, max_r * 0.42, n_tersier, shapes, ss,
+                                  size_mult=0.26, jitter=True)
+
         # Elemen kecil di pusat agar tidak kosong (titik fokus komposisi)
-        core_r = max_r * 0.05
+        core_r = max_r * 0.035
         draw.ellipse([cx - core_r, cy - core_r, cx + core_r, cy + core_r], fill=0)
 
         if ss > 1:
             img = img.resize((self.w, self.h), Image.LANCZOS)
         return img.convert("RGB")
 
-    def _draw_shape_arm(self, draw, cx, cy, angle, max_r, n_shapes, shapes, ss):
+    def _draw_shape_arm(self, draw, cx, cy, angle, max_r, n_shapes, shapes, ss,
+                         size_mult=1.0, jitter=False):
         ca, sa = math.cos(angle), math.sin(angle)
         min_r = max_r * 0.22
         for i in range(n_shapes):
             t = i / max(1, n_shapes - 1)
             r = min_r + (max_r - min_r) * t
-            size = max_r * (0.045 + 0.11 * t)  # kecil dekat pusat, besar ke ujung
+            # jitter: lapisan tersier sedikit menyimpang dari garis lurus
+            # (bukan presisi baris seperti lengan utama) supaya terkesan
+            # "debu pengisi" organik, bukan pengulangan kaku berlebih.
+            a_use = angle
+            if jitter:
+                a_use = angle + self.rng.uniform(-0.06, 0.06)
+                r *= self.rng.uniform(0.92, 1.08)
+                ca, sa = math.cos(a_use), math.sin(a_use)
+            size = max_r * (0.04 + 0.085 * t) * size_mult  # kecil dekat pusat, besar ke ujung
             px, py = cx + r * ca, cy + r * sa
             shape = shapes[i % len(shapes)]
             if shape == "triangle":

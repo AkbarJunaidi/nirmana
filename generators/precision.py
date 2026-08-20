@@ -24,7 +24,6 @@ matematis dab bundar berdiameter W di titik sambungan SELALU menutup penuh
 celah segitiga yang terbentuk antar dua segmen selebar W, untuk sudut
 berapapun. Hasilnya setara round-join/round-cap vektor sungguhan (seperti
 stroke-linejoin: round di SVG/Illustrator), presisi di semua skala resolusi.
-POKOK E BEN TAMBAH APIK AE
 """
 
 import math

@@ -206,7 +206,43 @@ Tiga mode dipilih lewat CLI:
 
 ## Sistem Presisi (Anti-Patahan) & Kesiapan Cetak/Digital
 
-### `precision.py` — jaminan garis & lengkung selalu tersambung mulus
+### Full-Bleed (komposisi memenuhi seluruh bidang gambar)
+
+Beberapa teknik sempat punya masalah "tidak penuh halaman" -- komposisi
+hanya mengisi sebagian kecil kanvas, menyisakan margin/bidang kosong luas
+yang tidak seimbang secara nirmana. Root cause-nya bermacam-macam dan
+semua sudah diperbaiki:
+
+- **Dipatok ke sisi terpendek, bukan diagonal** (`arrow_burst`,
+  `dot_gradient_x`, `shape_cross`, `wireframe_mesh`) -- motif radial yang
+  radiusnya dibatasi `min(W,H)` secara matematis TIDAK PERNAH bisa
+  menjangkau sudut kanvas (jarak ke sudut = setengah diagonal, ~1.4x lebih
+  jauh). Diperbaiki dengan memakai `hypot(W,H)/2` sebagai batas radius,
+  plus kepadatan elemen diskalakan mengikuti penambahan panjang supaya
+  tidak jadi renggang. `shape_cross` khususnya ditambah lapisan lengan
+  ketiga (tersier, dengan jitter halus) di antara lengan utama & sekunder
+  supaya kepadatan meluruh mulus dari pusat ke tepi tanpa "pita kosong" --
+  lalu laju pembesaran bentuknya dikalibrasi ulang supaya di ujung lengan
+  bentuk-bentuknya tetap terbaca satu-satu (bukan menyatu jadi blok solid
+  akibat kepadatan berlebihan).
+- **Blob/cluster terlalu sedikit & terlalu kecil** (`organik_burst`,
+  `organik_branching`, `anaglyph_relief`) -- diperbaiki dengan pola
+  grid+jitter adaptif terhadap luas kanvas (kepadatan otomatis menyesuaikan
+  ukuran render), memastikan tiap kuadran kanvas kebagian motif.
+- **Bidang objek yang secara geometris tak mungkin menyentuh sudut**
+  (`wireframe_mesh` dengan bentuk bola) -- ditambal aksen garis radiasi
+  tipis ala blueprint yang konsisten dengan tema teknik tsb.
+- **Proporsi tinggi/lebar terlalu kecil** (`lsystem_branching`) -- tinggi
+  tanaman dinaikkan dari 62-78%/30-48% jadi 84-94%/55-78% dari kanvas,
+  jumlah rumpun mengikuti lebar kanvas.
+- **Mosaik Voronoi merender teknik di ukuran KANVAS PENUH lalu memotongnya
+  ke sel** -- ini salah secara konsep: banyak teknik nirmana sengaja
+  dipusatkan (bola, ledakan radial), jadi kalau dipotong ke sel yang jauh
+  dari tengah kanvas, yang muncul cuma potongan acak yang terlihat
+  berantakan. Diperbaiki dengan merender tiap teknik PAS di bounding box
+  sel-nya sendiri, sehingga tiap sel menampilkan motif utuh & proporsional.
+
+### Anti-Patahan — `precision.py` (garis & lengkung selalu tersambung mulus)
 
 Akar masalah teknis "garis pada lingkaran/poligon yang patah" bukan cuma
 soal jumlah titik sampel, tapi bug rendering nyata di Pillow:
@@ -276,6 +312,21 @@ mengorbankan ketajaman baca dari jarak pandang normal).
   warna yang sudah dicoba & terlihat bagus) untuk yang tidak mau pusing
   memilih satu-satu lewat menu panjang. Preset tidak mengunci seed --
   tiap render tetap unik, yang dikurasi hanya kombinasi teknik & gayanya.
+
+## Sistem "Acak" yang Benar-Benar Acak (Shuffle Bag)
+
+Mode teknik "acak" (dan mode acak-per-karya untuk warna) sebelumnya memilih
+lewat `random.choice()` independen tiap karya -- secara probabilitas murni,
+dengan ~30 teknik dan batch pendek (3-6 karya), peluang ada teknik yang
+terulang di batch yang sama cukup tinggi (>25%), dan itu terasa "kok
+itu-itu lagi" di mata pengguna walau matematis valid.
+
+Sekarang dipakai **shuffle bag** (sampling tanpa pengembalian): semua
+teknik diacak urutannya lalu dipakai satu-satu sampai habis, baru
+"kantung" diisi ulang & diacak lagi. Ini menjamin tidak ada teknik yang
+terulang sebelum semua teknik lain kebagian giliran dulu -- hasilnya
+terasa jauh lebih adil dan variatif untuk mata, terutama pada batch
+sedang (5-15 karya) yang paling sering dipakai orang.
 
 ## Struktur Proyek
 

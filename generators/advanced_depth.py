@@ -130,9 +130,31 @@ class AdvancedDepthGenerator:
         denom = np.where(np.abs(denom) < 0.1, 0.1, denom)
         scale = focal / denom
         cx, cy = W / 2, H / 2
-        size = min(W, H) * 0.34
-        SX = cx + Xt * scale * size
-        SY = cy - Yt * scale * size
+        # size sebelumnya dipatok tunggal ke sisi TERPENDEK (0.34x) dan sama
+        # untuk sumbu X & Y -- pada kanvas persegi hasilnya bola kecil di
+        # tengah lautan putih; di kanvas rasio panjang (mis. 9:16) malah
+        # lebih parah lagi. Sekarang skala dibuat PER-SUMBU mengikuti lebar
+        # & tinggi kanvas MASING-MASING (sedikit anamorfik jika kanvas tidak
+        # persegi) supaya wireframe benar-benar memenuhi bidang gambar.
+        size_x = W * 0.465
+        size_y = H * 0.465
+        SX = cx + Xt * scale * size_x
+        SY = cy - Yt * scale * size_y
+
+        # Bidang objek (bola/pelana/medan gelombang) secara geometris tidak
+        # pernah menjangkau SUDUT kanvas persegi -- ditambal aksen garis
+        # radiasi tipis ala blueprint teknik dari pusat ke keempat sudut
+        # & tepi kanvas, konsisten dengan tema "wireframe" (bukan elemen
+        # asing), supaya sudut kanvas tidak terasa kosong melompong.
+        corner_pts = [(0, 0), (W, 0), (W, H), (0, H),
+                      (W / 2, 0), (W, H / 2), (W / 2, H), (0, H / 2)]
+        for (tx, ty) in corner_pts:
+            draw.line([(cx, cy), (tx, ty)], fill=(222, 222, 222), width=max(1, ss // 2))
+        ring_r_outer = math.hypot(W, H) * 0.5
+        for k in range(1, 4):
+            rr = ring_r_outer * (0.7 + 0.1 * k)
+            draw.ellipse([cx - rr, cy - rr, cx + rr, cy + rr], outline=(222, 222, 222),
+                         width=max(1, ss // 2))
 
         depth = Zt  # dipakai untuk shading (dekat kamera = Zt besar -> garis lebih tebal/gelap)
         d_min, d_max = depth.min(), depth.max()

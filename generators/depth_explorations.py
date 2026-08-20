@@ -71,28 +71,41 @@ class DepthExplorationGenerator:
         n_bumps = self.rng.randint(4, 6)
         line_w = max(1, int(min(W, H) * 0.0028))
 
-        for _ in range(n_bumps):
-            bx = self.rng.uniform(W * 0.2, W * 0.8)
-            by = self.rng.uniform(H * 0.2, H * 0.8)
-            br = min(W, H) * self.rng.uniform(0.10, 0.20)
-            sign = self.rng.choice([1, 1, -1])  # dominan "menonjol keluar"
-            peak_shift = sign * self.rng.uniform(0.55, 1.0) * max_shift_px
+        # Penempatan bukit: sebelumnya dibatasi ke zona tengah 60% kanvas
+        # (0.2-0.8) dengan hanya 4-6 bukit -- menyisakan bingkai kosong
+        # lebar di sekeliling & celah besar antar-bukit. Sekarang dipakai
+        # grid+jitter (pola yang sama dipakai di teknik organik) supaya
+        # bukit tersebar merata hingga ke tepi kanvas, dan jumlahnya
+        # diskalakan terhadap luas kanvas supaya kepadatan tetap konsisten.
+        area_factor = (W * H) / (1000 * 1000)
+        n_bumps = max(6, int(self.rng.uniform(7, 10) * math.sqrt(max(area_factor, 0.3))))
+        grid_cols = max(2, math.ceil(math.sqrt(n_bumps * (W / H))))
+        grid_rows = max(2, math.ceil(n_bumps / grid_cols))
+        cell_w, cell_h = W / grid_cols, H / grid_rows
 
-            n_rings = self.rng.randint(6, 9)
-            for ring_i in range(n_rings, 0, -1):
-                frac = ring_i / n_rings
-                radius = br * frac
-                # tinggi lokal makin besar mendekati puncak (pusat) -> makin
-                # ke tepi cincin, ketinggian & pergeseran makin kecil
-                local_h = math.exp(-((1 - frac) ** 2) / 0.18)
-                shift = peak_shift * local_h
-                shade = int(40 + 170 * (1 - local_h))  # pusat lebih gelap (menonjol)
+        for row in range(grid_rows):
+            for col in range(grid_cols):
+                bx = (col + self.rng.uniform(0.18, 0.82)) * cell_w
+                by = (row + self.rng.uniform(0.18, 0.82)) * cell_h
+                br = min(cell_w, cell_h) * self.rng.uniform(0.55, 0.82)
+                sign = self.rng.choice([1, 1, -1])  # dominan "menonjol keluar"
+                peak_shift = sign * self.rng.uniform(0.55, 1.0) * max_shift_px
 
-                cx_l, cx_r = bx - shift / 2, bx + shift / 2
-                dl.ellipse([cx_l - radius, by - radius, cx_l + radius, by + radius],
-                           outline=shade, width=line_w)
-                dr.ellipse([cx_r - radius, by - radius, cx_r + radius, by + radius],
-                           outline=shade, width=line_w)
+                n_rings = self.rng.randint(6, 9)
+                for ring_i in range(n_rings, 0, -1):
+                    frac = ring_i / n_rings
+                    radius = br * frac
+                    # tinggi lokal makin besar mendekati puncak (pusat) -> makin
+                    # ke tepi cincin, ketinggian & pergeseran makin kecil
+                    local_h = math.exp(-((1 - frac) ** 2) / 0.18)
+                    shift = peak_shift * local_h
+                    shade = int(40 + 170 * (1 - local_h))  # pusat lebih gelap (menonjol)
+
+                    cx_l, cx_r = bx - shift / 2, bx + shift / 2
+                    dl.ellipse([cx_l - radius, by - radius, cx_l + radius, by + radius],
+                               outline=shade, width=line_w)
+                    dr.ellipse([cx_r - radius, by - radius, cx_r + radius, by + radius],
+                               outline=shade, width=line_w)
 
         left_arr = np.asarray(left, dtype=np.float64)
         right_arr = np.asarray(right, dtype=np.float64)
@@ -126,10 +139,17 @@ class DepthExplorationGenerator:
         img = Image.new("L", (W, H), 255)
         draw = ImageDraw.Draw(img)
 
-        n_plants = n_plants or self.rng.randint(3, 5)
+        # Jumlah rumpun diskalakan terhadap lebar kanvas & proporsi tinggi
+        # tanaman dibesarkan signifikan -- sebelumnya tanaman utama cuma
+        # mencapai 62-78% tinggi kanvas dan anakan cuma 30-48%, menyisakan
+        # bidang langit kosong raksasa di atas (dan pada rasio tertentu
+        # rumpun malah numpuk di satu sisi). Sekarang tanaman jauh lebih
+        # tinggi & jumlah rumpun mengikuti lebar kanvas supaya benar-benar
+        # merentang penuh dari kiri ke kanan, hampir menyentuh tepi atas.
+        n_plants = n_plants or max(4, round((W / H) * self.rng.uniform(4.5, 6.0)))
 
         # Slot horizontal untuk tiap tanaman, sedikit jitter biar tidak kaku
-        margin = W * 0.08
+        margin = W * 0.04
         slot_w = (W - margin * 2) / n_plants
         slot_centers = [margin + slot_w * (i + 0.5) + self.rng.uniform(-slot_w * 0.15, slot_w * 0.15)
                         for i in range(n_plants)]
@@ -140,7 +160,9 @@ class DepthExplorationGenerator:
         for p_idx in range(n_plants):
             is_main = (p_idx == main_idx)
             axiom, rules, angle_deg = self.rng.choice(self._LSYSTEM_PRESETS)
-            iters = (iterations or self.rng.randint(4, 5)) if is_main else self.rng.randint(3, 4)
+            # Iterasi minimum dinaikkan (dari 3 ke 4) supaya tak ada rumpun
+            # yang kebetulan jadi nyaris satu garis lurus polos (degenerate).
+            iters = (iterations or self.rng.randint(5, 6)) if is_main else self.rng.randint(5, 6)
             angle = math.radians(angle_deg * self.rng.uniform(0.9, 1.1))
 
             s = axiom
@@ -186,10 +208,10 @@ class DepthExplorationGenerator:
             span_x = max(1e-6, maxx - minx)
             span_y = max(1e-6, maxy - miny)
 
-            target_h = H * (self.rng.uniform(0.62, 0.78) if is_main else self.rng.uniform(0.30, 0.48))
+            target_h = H * (self.rng.uniform(0.84, 0.94) if is_main else self.rng.uniform(0.55, 0.78))
             scale = target_h / span_y
             # Batasi lebar juga supaya tidak menyerbu slot tetangga
-            max_w_allowed = slot_w * 1.7
+            max_w_allowed = slot_w * 1.9
             scale = min(scale, max_w_allowed / span_x)
 
             offset_x = slot_centers[p_idx] - (minx + maxx) / 2 * scale
