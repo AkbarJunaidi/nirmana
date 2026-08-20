@@ -87,8 +87,14 @@ TECHNIQUES = {
     "27": "hierarki_paralel",
     "28": "hierarki_konsentris",
     "29": "hierarki_radial",
-    "30": "mosaik_voronoi",
-    "31": "acak",
+    "30": "bidang",
+    "31": "value_grid",
+    "32": "irama_repetisi",
+    "33": "irama_progresi",
+    "34": "irama_oposisi",
+    "35": "keseimbangan_asimetris",
+    "36": "mosaik_voronoi",
+    "37": "acak",
 }
 
 TECHNIQUE_LABELS = dict(BASE_TECHNIQUE_LABELS)

@@ -191,6 +191,38 @@ kompleksitas nirmana tekstur kaya (banyak motif berdampingan dalam satu
 bidang). Otomatis membatasi resolusi kerja internal untuk kanvas besar
 (cetak/4K) supaya tidak kehabisan memori.
 
+### 11. Empat Nirmana Klasik DKV (Fondasi) [BARU]
+`generators/classic_nirmana.py`
+
+Melengkapi empat tugas nirmana paling dasar di kurikulum DKV semester awal
+yang sebelumnya belum ada di sistem ini (yang lain lebih condong ke
+eksplorasi garis/tekstur/ilusi kedalaman tingkat lanjut):
+
+- **Nirmana Bidang (Figure-Ground)** -- komposisi murni dari hubungan
+  bidang positif-negatif TANPA garis sama sekali. Dibangun lewat teknik
+  klasik "overlap bidang transparan ber-XOR": tiap bidang baru yang
+  tumpang tindih dengan bidang sebelumnya membalik warnanya -- persis
+  menumpuk lembar kalkir tembus pandang, menghasilkan bentuk baru dari
+  pertemuan bidang lama yang tak pernah digambar eksplisit (ambiguitas
+  figure-ground otentik, bukan simulasi).
+- **Nirmana Kontras Value** -- grid presisi 9 tingkat value abu-abu
+  (putih murni s/d hitam murni, terbagi rata & eksak), disusun via
+  constraint sederhana sehingga tak ada dua sel bertetangga langsung
+  dengan value sama -- melatih kalibrasi mata terhadap tangga tonal.
+  Ukuran sel grid sengaja dibuat tidak seragam (gaya Mondrian) untuk
+  nilai komposisi tambahan.
+- **Nirmana Irama** -- tiga varian terpisah sesuai tiga jenis irama
+  visual klasik: **Repetitif** (elemen identik, interval & ukuran tetap
+  presisi), **Progresif** (ukuran/rotasi berubah bertahap menyusuri
+  baris, membentuk efek "crescendo"), dan **Oposisi** (dua motif
+  berselang-seling AB/AAB membentuk pola "ketukan").
+- **Nirmana Keseimbangan Asimetris** -- bukan cuma "kelihatan seimbang":
+  titik berat visual dihitung SECARA AKTUAL dari sebaran tinta di piksel
+  hasil render (bobot = tingkat kegelapan), lalu elemen penyeimbang kecil
+  ditambahkan secara algoritmik di sisi berlawanan pada jarak jauh dari
+  pusat (prinsip tuas: massa kecil x jarak jauh menyeimbangkan massa
+  besar x jarak dekat) sampai titik berat mendekati pusat kanvas.
+
 ## Sistem Warna
 
 Tiga mode dipilih lewat CLI:
@@ -343,7 +375,8 @@ nirmana/
 │   ├── advanced_depth.py         # Teknik 5: Advanced Depth (3 varian)
 │   ├── depth_explorations.py     # Teknik 6: Depth Exploration (3 varian)
 │   ├── emotive.py                # Teknik 7: Gestur Emosional (abstrak ekspresif)
-│   ├── line_hierarchy.py         # [BARU] Teknik 8: Garis Tebal-Tipis (3 varian)
+│   ├── line_hierarchy.py         # Teknik 8: Garis Tebal-Tipis (3 varian)
+│   ├── classic_nirmana.py        # [BARU] Teknik 11: 4 Nirmana Klasik DKV (6 varian)
 │   ├── radial_motif.py           # Teknik 9: Motif Radial (4 varian)
 │   ├── composition.py            # Teknik 10: Mosaik Voronoi
 │   ├── stratum.py                # Sedimen / Kekosongan / Patahan (kedalaman formal)

@@ -21,6 +21,7 @@ from .stratum import StratumGenerator
 from .flow_contours import FlowContourGenerator
 from .dot_nirmana import DotNirmanaGenerator
 from .line_hierarchy import LineHierarchyGenerator
+from .classic_nirmana import ClassicNirmanaGenerator
 
 BASE_TECHNIQUE_LABELS = {
     "garis": "Nirmana Garis (Op-Art Flow Distortion)",
@@ -52,6 +53,12 @@ BASE_TECHNIQUE_LABELS = {
     "hierarki_paralel": "Garis Tebal-Tipis - Keluarga Paralel (Uji Skala Ketebalan)",
     "hierarki_konsentris": "Garis Tebal-Tipis - Cincin Konsentris Presisi (Meruncing)",
     "hierarki_radial": "Garis Tebal-Tipis - Jari-jari Meruncing x Busur",
+    "bidang": "Nirmana Bidang - Figure-Ground (Overlap XOR)",
+    "value_grid": "Nirmana Kontras Value - Grid 9 Tingkat",
+    "irama_repetisi": "Nirmana Irama - Repetitif (Interval & Ukuran Tetap)",
+    "irama_progresi": "Nirmana Irama - Progresif (Gradasi Ukuran/Rotasi)",
+    "irama_oposisi": "Nirmana Irama - Oposisi (Pola Ketukan Berselang)",
+    "keseimbangan_asimetris": "Nirmana Keseimbangan Asimetris (Torsi Visual Terkoreksi)",
 }
 
 # Pengelompokan dipakai oleh composition.py (Mosaik Voronoi butuh kumpulan
@@ -62,7 +69,9 @@ GEOMETRIC_KEYS = ["geometrik_kubus", "geometrik_spiral", "geometrik_grid", "dept
 MOTIF_KEYS = ["motif_arrow", "motif_dotx", "motif_shapecross", "motif_weave"]
 MISC_KEYS = ["garis", "depth_shatter", "depth_spiral", "droste", "emosi",
              "sedimen", "kekosongan", "patahan", "kontur_alir", "titik",
-             "hierarki_paralel", "hierarki_konsentris", "hierarki_radial"]
+             "hierarki_paralel", "hierarki_konsentris", "hierarki_radial",
+             "bidang", "value_grid", "irama_repetisi", "irama_progresi",
+             "irama_oposisi", "keseimbangan_asimetris"]
 # anaglyph sengaja TIDAK dimasukkan ke pool otomatis composition -- warna
 # merah-cyannya adalah konten inti teknik itu sendiri, akan terlihat aneh
 # kalau dipaksa berdampingan acak dengan teknik hitam-putih lain atau
@@ -150,5 +159,18 @@ def render_base_technique(technique: str, w: int, h: int, seed: int):
         return LineHierarchyGenerator(w, h, seed=seed).generate_concentric_taper()
     if technique == "hierarki_radial":
         return LineHierarchyGenerator(w, h, seed=seed).generate_radial_taper()
+
+    if technique == "bidang":
+        return ClassicNirmanaGenerator(w, h, seed=seed).generate_figure_ground()
+    if technique == "value_grid":
+        return ClassicNirmanaGenerator(w, h, seed=seed).generate_value_grid()
+    if technique == "irama_repetisi":
+        return ClassicNirmanaGenerator(w, h, seed=seed).generate_rhythm_repetition()
+    if technique == "irama_progresi":
+        return ClassicNirmanaGenerator(w, h, seed=seed).generate_rhythm_progression()
+    if technique == "irama_oposisi":
+        return ClassicNirmanaGenerator(w, h, seed=seed).generate_rhythm_transition()
+    if technique == "keseimbangan_asimetris":
+        return ClassicNirmanaGenerator(w, h, seed=seed).generate_asymmetric_balance()
 
     raise ValueError(f"Teknik tidak dikenali: {technique}")
