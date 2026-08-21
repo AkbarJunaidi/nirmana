@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "python-nirmana-generator"
+version = "1.0.0"
+description = "Generator nirmana DKV otentik -- 34+ teknik matematis (bukan noise acak) untuk garis, bidang, tekstur, kedalaman, dan komposisi klasik, siap cetak & vektor."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "Python Nirmana Generator Contributors" }]
+keywords = ["nirmana", "dkv", "generative-art", "design", "svg", "creative-coding", "op-art"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: End Users/Desktop",
+    "Intended Audience :: Education",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Topic :: Multimedia :: Graphics",
+    "Topic :: Artistic Software",
+]
+dependencies = [
+    "Pillow>=10.0.0",
+    "numpy>=1.24.0",
+    "scipy>=1.10.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0.0"]
+
+[project.scripts]
+nirmana = "main:main"
+
+[tool.setuptools]
+py-modules = ["main"]
+packages = ["generators"]

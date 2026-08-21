@@ -78,6 +78,17 @@ MISC_KEYS = ["garis", "depth_shatter", "depth_spiral", "droste", "emosi",
 # ikut ter-recolor oleh sistem palet.
 ALL_BASE_KEYS = ORGANIC_KEYS + GEOMETRIC_KEYS + MOTIF_KEYS + MISC_KEYS
 
+# Teknik yang secara PRINSIP DESAIN memang sengaja jarang/berongga (ruang
+# negatif luas adalah bagian dari tekniknya, bukan cacat) -- dipakai
+# quality.py supaya evaluator kualitas tidak salah kritik menyebut ruang
+# kosong yang disengaja sebagai "komposisi belum penuh".
+SPARSE_BY_DESIGN = {
+    "keseimbangan_asimetris",  # ruang negatif adalah inti prinsip desainnya
+    "motif_arrow", "motif_dotx", "motif_shapecross",  # motif radial diskret
+    "hierarki_radial",  # jari-jari meruncing + busur tipis
+    "titik",  # grid halftone dot, area antar-titik memang kosong
+}
+
 
 def render_base_technique(technique: str, w: int, h: int, seed: int):
     """Merender satu teknik DASAR nirmana. Mengembalikan PIL.Image saja
@@ -172,5 +183,61 @@ def render_base_technique(technique: str, w: int, h: int, seed: int):
         return ClassicNirmanaGenerator(w, h, seed=seed).generate_rhythm_transition()
     if technique == "keseimbangan_asimetris":
         return ClassicNirmanaGenerator(w, h, seed=seed).generate_asymmetric_balance()
+
+    raise ValueError(f"Teknik tidak dikenali: {technique}")
+
+
+# ======================================================================
+# EKSPOR VEKTOR (SVG) -- hanya untuk teknik yang secara fundamental
+# berbasis garis/bentuk geometris murni (lihat svg_export.py untuk
+# penjelasan lengkap kenapa noise/tekstur raster TIDAK diekspor SVG).
+# Tiap fungsi svg di sini memakai rng lokal fresh dari `seed` yang sama
+# persis dengan versi raster, jadi seed yang sama menghasilkan komposisi
+# yang sepadan (bukan pixel-identik, tapi sama secara struktural/gaya)
+# antara file .png dan .svg -- pengguna bisa percaya keduanya "karya yang
+# sama", cuma beda format.
+# ======================================================================
+
+SVG_TECHNIQUE_LABELS = {
+    "hierarki_paralel": BASE_TECHNIQUE_LABELS["hierarki_paralel"],
+    "hierarki_konsentris": BASE_TECHNIQUE_LABELS["hierarki_konsentris"],
+    "hierarki_radial": BASE_TECHNIQUE_LABELS["hierarki_radial"],
+    "bidang": BASE_TECHNIQUE_LABELS["bidang"],
+    "value_grid": BASE_TECHNIQUE_LABELS["value_grid"],
+    "irama_repetisi": BASE_TECHNIQUE_LABELS["irama_repetisi"],
+    "irama_progresi": BASE_TECHNIQUE_LABELS["irama_progresi"],
+    "irama_oposisi": BASE_TECHNIQUE_LABELS["irama_oposisi"],
+    "keseimbangan_asimetris": BASE_TECHNIQUE_LABELS["keseimbangan_asimetris"],
+}
+
+SVG_CAPABLE_KEYS = set(SVG_TECHNIQUE_LABELS.keys())
+
+
+def render_svg_technique(technique: str, w: int, h: int, seed: int) -> str:
+    """Mengembalikan markup SVG (string) untuk teknik yang mendukung
+    ekspor vektor. Raise ValueError kalau teknik tidak ada di
+    SVG_CAPABLE_KEYS (mis. teknik berbasis noise/tekstur raster)."""
+    if technique not in SVG_CAPABLE_KEYS:
+        raise ValueError(f"Teknik '{technique}' tidak mendukung ekspor SVG "
+                          f"(fundamentalnya raster/tekstur, bukan garis/bentuk vektor).")
+
+    if technique == "hierarki_paralel":
+        return LineHierarchyGenerator(w, h, seed=seed).generate_parallel_families_svg()
+    if technique == "hierarki_konsentris":
+        return LineHierarchyGenerator(w, h, seed=seed).generate_concentric_taper_svg()
+    if technique == "hierarki_radial":
+        return LineHierarchyGenerator(w, h, seed=seed).generate_radial_taper_svg()
+    if technique == "bidang":
+        return ClassicNirmanaGenerator(w, h, seed=seed).generate_figure_ground_svg()
+    if technique == "value_grid":
+        return ClassicNirmanaGenerator(w, h, seed=seed).generate_value_grid_svg()
+    if technique == "irama_repetisi":
+        return ClassicNirmanaGenerator(w, h, seed=seed).generate_rhythm_repetition_svg()
+    if technique == "irama_progresi":
+        return ClassicNirmanaGenerator(w, h, seed=seed).generate_rhythm_progression_svg()
+    if technique == "irama_oposisi":
+        return ClassicNirmanaGenerator(w, h, seed=seed).generate_rhythm_transition_svg()
+    if technique == "keseimbangan_asimetris":
+        return ClassicNirmanaGenerator(w, h, seed=seed).generate_asymmetric_balance_svg()
 
     raise ValueError(f"Teknik tidak dikenali: {technique}")

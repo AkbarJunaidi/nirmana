@@ -40,6 +40,8 @@ import random
 import numpy as np
 from PIL import Image, ImageDraw
 
+from .svg_export import SVGCanvas
+
 
 class ClassicNirmanaGenerator:
     def __init__(self, width: int, height: int, seed: int = None):
@@ -78,13 +80,47 @@ class ClassicNirmanaGenerator:
             pts = self._rot_rect(cx, cy, size / 2, size * 0.16, angle)
             draw.polygon(pts, fill=color)
 
-    def _partition(self, n: int) -> list:
+    def _partition(self, n: int, rng: random.Random = None) -> list:
         """n pecahan acak positif berjumlah 1 -- dipakai untuk grid dengan
         ukuran sel bervariasi (gaya Mondrian) tapi tetap grid orthogonal
-        penuh (full-bleed otomatis karena partisi selalu menutup 0..1)."""
-        raw = [self.rng.uniform(0.6, 1.7) for _ in range(n)]
+        penuh (full-bleed otomatis karena partisi selalu menutup 0..1).
+        rng opsional supaya versi SVG bisa memakai rng lokal terpisah
+        (paritas komposisi persis dengan versi raster untuk seed sama)."""
+        rng = rng or self.rng
+        raw = [rng.uniform(0.6, 1.7) for _ in range(n)]
         s = sum(raw)
         return [x / s for x in raw]
+
+    def _shape_area(self, size: float, shape: str) -> float:
+        """Luas analitik tiap bentuk (bukan hasil hitung piksel) -- dipakai
+        versi SVG dari Keseimbangan Asimetris untuk menghitung titik berat
+        SECARA MATEMATIS EKSAK, bukan aproksimasi rasterisasi. Ini bahkan
+        lebih presisi daripada versi raster yang menjumlahkan piksel."""
+        if shape == "circle":
+            r = size / 2
+            return math.pi * r * r
+        elif shape == "square":
+            return size * size
+        elif shape == "triangle":
+            r = size / 2
+            return (3 * math.sqrt(3) / 4) * r * r
+        else:  # "bar"
+            return size * (size * 0.32)
+
+    def _stamp_shape_svg(self, svg: SVGCanvas, cx, cy, size, angle, shape, fill="#000000") -> None:
+        """Padanan SVG dari `_stamp_shape` -- geometri identik (lewat
+        `_rot_rect` yang sama), cuma dituliskan sebagai elemen vektor."""
+        if shape == "circle":
+            svg.circle(cx, cy, size / 2, fill=fill)
+        elif shape == "square":
+            svg.polygon(self._rot_rect(cx, cy, size / 2, size / 2, angle), fill=fill)
+        elif shape == "triangle":
+            r = size / 2
+            pts = [(cx + r * math.cos(angle + k * math.tau / 3),
+                     cy + r * math.sin(angle + k * math.tau / 3)) for k in range(3)]
+            svg.polygon(pts, fill=fill)
+        else:  # "bar"
+            svg.polygon(self._rot_rect(cx, cy, size / 2, size * 0.16, angle), fill=fill)
 
     # ==================================================================
     # 1. NIRMANA BIDANG (Figure-Ground via overlap XOR)
@@ -330,3 +366,202 @@ class ClassicNirmanaGenerator:
         if ss > 1:
             img = img.resize((self.w, self.h), Image.LANCZOS)
         return img.convert("RGB")
+
+    # ==================================================================
+    # VERSI SVG (vektor murni) -- paritas komposisi persis dengan versi
+    # raster untuk seed yang sama (rng lokal fresh dari self.seed, urutan
+    # pemanggilan random disamakan persis dengan versi raster di atas).
+    # ==================================================================
+
+    def generate_figure_ground_svg(self, n_shapes: int = None) -> str:
+        """XOR raster diganti fill-rule="evenodd" pada SATU <path> gabungan
+        -- padanan vektor EKSAK (bukan aproksimasi): area yang tertutup
+        jumlah ganjil sub-path terisi, genap kosong, prinsip identik XOR
+        tapi presisi matematis sempurna di tepi bentuk."""
+        rng = random.Random(self.seed)
+        W, H = self.w, self.h
+        diag = math.hypot(W, H)
+        n_shapes = n_shapes or rng.randint(5, 8)
+
+        shapes = []
+        for _ in range(n_shapes):
+            shape_type = rng.choice(["circle", "rect", "triangle"])
+            size = diag * rng.uniform(0.30, 0.58)
+            cx = rng.uniform(W * 0.05, W * 0.95)
+            cy = rng.uniform(H * 0.05, H * 0.95)
+            angle = rng.uniform(0, math.tau)
+            if shape_type == "circle":
+                shapes.append({"type": "circle", "cx": cx, "cy": cy, "r": size / 2})
+            elif shape_type == "rect":
+                hw, hh = size / 2, size * rng.uniform(0.35, 0.9) / 2
+                shapes.append({"type": "polygon", "pts": self._rot_rect(cx, cy, hw, hh, angle)})
+            else:
+                r = size / 2
+                pts = [(cx + r * math.cos(angle + k * math.tau / 3),
+                         cy + r * math.sin(angle + k * math.tau / 3)) for k in range(3)]
+                shapes.append({"type": "polygon", "pts": pts})
+
+        svg = SVGCanvas(W, H, background="#ffffff")
+        svg.path_evenodd(shapes, fill="#000000")
+        return svg.to_string()
+
+    def generate_value_grid_svg(self) -> str:
+        rng = random.Random(self.seed)
+        W, H = self.w, self.h
+        svg = SVGCanvas(W, H, background=None)  # grid selalu menutup penuh, bg tak perlu
+
+        n_cols = rng.randint(5, 7)
+        n_rows = rng.randint(5, 7)
+        col_fracs = self._partition(n_cols, rng=rng)
+        row_fracs = self._partition(n_rows, rng=rng)
+        xs = [0.0]
+        for f in col_fracs:
+            xs.append(xs[-1] + f)
+        ys = [0.0]
+        for f in row_fracs:
+            ys.append(ys[-1] + f)
+        xs = [x * W for x in xs]
+        ys = [y * H for y in ys]
+
+        values = [round(i * 255 / 8) for i in range(9)]
+        grid_vals = [[None] * n_cols for _ in range(n_rows)]
+        for r in range(n_rows):
+            for c in range(n_cols):
+                candidates = list(values)
+                rng.shuffle(candidates)
+                neighbor_vals = set()
+                if c > 0:
+                    neighbor_vals.add(grid_vals[r][c - 1])
+                if r > 0:
+                    neighbor_vals.add(grid_vals[r - 1][c])
+                chosen = next((v for v in candidates if v not in neighbor_vals), candidates[0])
+                grid_vals[r][c] = chosen
+                svg.rect(xs[c], ys[r], xs[c + 1] - xs[c], ys[r + 1] - ys[r],
+                          fill=f"#{chosen:02x}{chosen:02x}{chosen:02x}")
+
+        return svg.to_string()
+
+    def generate_rhythm_repetition_svg(self) -> str:
+        rng = random.Random(self.seed)
+        W, H = self.w, self.h
+        svg = SVGCanvas(W, H, background="#ffffff")
+
+        shape = rng.choice(["circle", "square", "triangle", "bar"])
+        n_cols = rng.randint(8, 13)
+        cell = W / n_cols
+        n_rows = max(1, round(H / cell))
+        cell_h = H / n_rows
+        size = min(cell, cell_h) * rng.uniform(0.5, 0.66)
+        angle = rng.uniform(0, math.tau)
+        stagger = rng.choice([True, False])
+
+        for r in range(n_rows):
+            for c in range(n_cols):
+                cx = (c + 0.5) * cell + (cell / 2 if stagger and r % 2 == 1 else 0)
+                cy = (r + 0.5) * cell_h
+                self._stamp_shape_svg(svg, cx, cy, size, angle, shape)
+
+        return svg.to_string()
+
+    def generate_rhythm_progression_svg(self) -> str:
+        rng = random.Random(self.seed)
+        W, H = self.w, self.h
+        svg = SVGCanvas(W, H, background="#ffffff")
+
+        shape = rng.choice(["circle", "square", "triangle"])
+        n_rows = rng.randint(5, 8)
+        row_h = H / n_rows
+
+        for r in range(n_rows):
+            cy_base = (r + 0.5) * row_h
+            n_elems = rng.randint(9, 15)
+            reverse = rng.choice([True, False])
+            wave_amp = row_h * rng.uniform(0.0, 0.18)
+            rot_sweep = rng.uniform(0, math.pi * 1.6)
+            for i in range(n_elems):
+                t = i / max(1, n_elems - 1)
+                tt = (1 - t) if reverse else t
+                size = row_h * (0.16 + 0.66 * tt)
+                cx = (i + 0.5) * (W / n_elems)
+                cy = cy_base + math.sin(t * math.pi) * wave_amp
+                angle = t * rot_sweep
+                self._stamp_shape_svg(svg, cx, cy, size, angle, shape)
+
+        return svg.to_string()
+
+    def generate_rhythm_transition_svg(self) -> str:
+        rng = random.Random(self.seed)
+        W, H = self.w, self.h
+        svg = SVGCanvas(W, H, background="#ffffff")
+
+        shapes_pair = rng.sample(["circle", "square", "triangle", "bar"], 2)
+        n_rows = rng.randint(5, 8)
+        row_h = H / n_rows
+
+        for r in range(n_rows):
+            cy = (r + 0.5) * row_h
+            n_elems = rng.randint(10, 17)
+            base_size = row_h * rng.uniform(0.5, 0.66)
+            pattern_len = rng.choice([2, 2, 3])
+            row_angle = rng.uniform(0, math.tau)
+            for i in range(n_elems):
+                cx = (i + 0.5) * (W / n_elems)
+                is_accent = (i % pattern_len == 0)
+                shape = shapes_pair[0] if is_accent else shapes_pair[1]
+                size_mult = 1.0 if is_accent else 0.6
+                self._stamp_shape_svg(svg, cx, cy, base_size * size_mult, row_angle, shape)
+
+        return svg.to_string()
+
+    def generate_asymmetric_balance_svg(self) -> str:
+        """Titik berat dihitung ANALITIK dari luas & posisi tiap bentuk
+        (bukan menjumlahkan piksel seperti versi raster) -- untuk bentuk
+        simetris beraturan (lingkaran/persegi/segitiga sama sisi) yang
+        semuanya dipusatkan di (cx,cy), titik berat gabungan = rata-rata
+        posisi tertimbang luas. Ini lebih presisi daripada versi raster,
+        bukan aproksimasi ulang."""
+        rng = random.Random(self.seed)
+        W, H = self.w, self.h
+        svg = SVGCanvas(W, H, background="#ffffff")
+        cxc, cyc = W / 2, H / 2
+
+        big_size = min(W, H) * rng.uniform(0.30, 0.40)
+        side = rng.choice([-1, 1])
+        big_x = cxc + side * W * rng.uniform(0.16, 0.26)
+        big_y = cyc + rng.uniform(-H * 0.1, H * 0.1)
+        big_shape = rng.choice(["circle", "square", "triangle"])
+        big_angle = rng.uniform(0, math.tau)
+        self._stamp_shape_svg(svg, big_x, big_y, big_size, big_angle, big_shape)
+        mass = [(big_x, big_y, self._shape_area(big_size, big_shape))]
+
+        n_small = rng.randint(2, 4)
+        for _ in range(n_small):
+            s = min(W, H) * rng.uniform(0.04, 0.09)
+            x = cxc + rng.uniform(-W * 0.36, W * 0.36)
+            y = cyc + rng.uniform(-H * 0.4, H * 0.4)
+            shape = rng.choice(["circle", "square", "triangle"])
+            angle = rng.uniform(0, math.tau)
+            self._stamp_shape_svg(svg, x, y, s, angle, shape)
+            mass.append((x, y, self._shape_area(s, shape)))
+
+        total_area = sum(a for _, _, a in mass)
+        cx_mass = sum(x * a for x, y, a in mass) / total_area
+        cy_mass = sum(y * a for x, y, a in mass) / total_area
+        dx, dy = cx_mass - cxc, cy_mass - cyc
+        imbalance = math.hypot(dx, dy)
+
+        if imbalance > min(W, H) * 0.01:
+            ux, uy = -dx / imbalance, -dy / imbalance
+            n_correction = rng.randint(2, 3)
+            for k in range(n_correction):
+                dist = min(W, H) * rng.uniform(0.36, 0.47)
+                s = min(W, H) * rng.uniform(0.055, 0.12)
+                x = cxc + ux * dist + rng.uniform(-W * 0.05, W * 0.05)
+                y = cyc + uy * dist + rng.uniform(-H * 0.05, H * 0.05)
+                x = max(s, min(W - s, x))
+                y = max(s, min(H - s, y))
+                shape = rng.choice(["circle", "square", "triangle"])
+                angle = rng.uniform(0, math.tau)
+                self._stamp_shape_svg(svg, x, y, s, angle, shape)
+
+        return svg.to_string()

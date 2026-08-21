@@ -3,23 +3,94 @@
 Generator nirmana yang benar-benar meniru **teknik & kaidah nirmana asli**
 (dwimatra), bukan sekadar menaruh bentuk geometris acak di kanvas.
 Setiap teknik di sini adalah algoritma/simulasi matematis yang memang jadi
-dasar gaya visual tersebut di dunia nyata.
+dasar gaya visual tersebut di dunia nyata — DLA (diffusion-limited
+aggregation) untuk motif karang/percabangan organik, medan vektor untuk
+distorsi op-art, XOR bidang untuk figure-ground, dan seterusnya.
+
+**34+ teknik** mencakup nirmana garis, organik, geometrik, ilusi
+kedalaman, motif radial, dan empat nirmana klasik fondasi DKV (bidang,
+kontras value, irama, keseimbangan asimetris) — siap cetak presisi 300
+DPI, siap vektor SVG, dan dilengkapi asisten kritik komposisi otomatis.
+
+<p align="center">
+  <img src="examples/mosaik_voronoi_hero.jpg" width="640" alt="Mosaik Voronoi -- gabungan beberapa teknik nirmana">
+</p>
+
+<table>
+<tr>
+<td><img src="examples/hierarki_konsentris.jpg" width="200" alt="Garis Tebal-Tipis - Konsentris"><br><sub>Garis Tebal-Tipis (Konsentris)</sub></td>
+<td><img src="examples/organik_branching.jpg" width="200" alt="Organik - DLA Branching"><br><sub>Organik — DLA Branching</sub></td>
+<td><img src="examples/bidang.jpg" width="200" alt="Nirmana Bidang - Figure-Ground"><br><sub>Nirmana Bidang (Figure-Ground)</sub></td>
+<td><img src="examples/geometrik_kubus.jpg" width="200" alt="Geometrik - Isometric Cubes"><br><sub>Geometrik — Isometric Cubes</sub></td>
+</tr>
+<tr>
+<td><img src="examples/kontur_alir.jpg" width="200" alt="Kontur Alir"><br><sub>Kontur Alir (Paisley/Fingerprint)</sub></td>
+<td><img src="examples/keseimbangan_asimetris.jpg" width="200" alt="Keseimbangan Asimetris"><br><sub>Keseimbangan Asimetris</sub></td>
+<td><img src="examples/depth_tunnel.jpg" width="200" alt="Perspective Tunnel"><br><sub>Depth Illusion — Perspective Tunnel</sub></td>
+<td><img src="examples/wireframe.jpg" width="200" alt="Wireframe 3D"><br><sub>Advanced Depth — Wireframe 3D</sub></td>
+</tr>
+<tr>
+<td><img src="examples/value_grid.jpg" width="200" alt="Kontras Value Grid"><br><sub>Kontras Value — Grid 9 Tingkat</sub></td>
+<td><img src="examples/organik_burst.jpg" width="200" alt="Hatching Burst"><br><sub>Organik — Hatching Burst</sub></td>
+<td><img src="examples/irama_oposisi.jpg" width="200" alt="Irama Oposisi"><br><sub>Irama — Oposisi</sub></td>
+<td><img src="examples/motif_shapecross.jpg" width="200" alt="Shape Cross"><br><sub>Motif Radial — Shape Cross</sub></td>
+</tr>
+</table>
 
 ## Instalasi
 
 ```bash
-pip install pillow numpy --break-system-packages
+git clone <url-repo-ini>
+cd nirmana-main
+pip install -r requirements.txt
+# atau, supaya bisa dipanggil sebagai command `nirmana` dari mana saja:
+pip install -e .
 ```
+
+Butuh Python 3.9+. Dependensi: Pillow, numpy, scipy (scipy dipakai
+evaluator kualitas untuk deteksi area kosong; ada fallback murni-Python
+otomatis kalau scipy tidak terpasang, lihat `generators/quality.py`).
 
 ## Menjalankan
 
+**Mode interaktif** (tanya-jawab, paling mudah untuk eksplorasi):
+
 ```bash
-cd nirmana
 python3 main.py
+# atau, kalau sudah `pip install -e .`:
+nirmana
 ```
 
-Ikuti prompt CLI: pilih rasio/resolusi, teknik nirmana, palet warna, dan
-jumlah karya. Hasil tersimpan di folder `outputs/`.
+**Mode CLI non-interaktif** (untuk skrip/automasi/batch job -- tidak ada
+prompt sama sekali):
+
+```bash
+# Satu teknik spesifik, 5 karya, sekalian ekspor SVG
+python3 main.py --technique hierarki_konsentris --count 5 --svg
+
+# Pakai preset kurasi, resolusi A4 cetak
+python3 main.py --preset 3 --count 10 --ratio 5
+
+# Mode acak (shuffle-bag, tak berulang) + mode kualitas (3 kandidat/karya)
+python3 main.py --technique acak --count 8 --quality 3
+
+# Lihat semua kunci yang valid
+python3 main.py --list-techniques
+python3 main.py --list-ratios
+python3 main.py --list-palettes
+python3 main.py --list-presets
+```
+
+Hasil (PNG, dan `.svg` kalau `--svg` diaktifkan untuk teknik yang
+mendukung) tersimpan di folder `outputs/`, beserta `galeri.html` untuk
+melihat semua hasil batch sekaligus di browser.
+
+## Menjalankan Test
+
+```bash
+pip install -e ".[dev]"
+pytest tests/ -v
+```
 
 ## Teknik yang Tersedia
 
@@ -223,6 +294,56 @@ eksplorasi garis/tekstur/ilusi kedalaman tingkat lanjut):
   pusat (prinsip tuas: massa kecil x jarak jauh menyeimbangkan massa
   besar x jarak dekat) sampai titik berat mendekati pusat kanvas.
 
+## Ekspor Vektor (SVG)
+
+Sembilan teknik yang secara fundamental berbasis garis/bentuk geometris
+murni (bukan noise/tekstur raster) bisa diekspor sebagai **SVG asli**,
+bukan cuma PNG:
+
+- Garis Tebal-Tipis: Keluarga Paralel, Cincin Konsentris, Jari-jari Meruncing
+- Nirmana Bidang (Figure-Ground), Kontras Value, Irama (ketiga varian),
+  Keseimbangan Asimetris
+
+Kenapa ini penting, bukan cuma "format tambahan":
+
+- **Presisi tak terbatas** -- garis tetap tajam dicetak poster 2 meter
+  ataupun ditampilkan di layar HP, karena tidak ada piksel yang di-upscale.
+- **Sambungan otomatis mulus** lewat `stroke-linejoin="round"` bawaan
+  SVG -- renderer vektor sungguhan tidak punya bug "celah di sudut"
+  seperti rasterizer Pillow (itu sebabnya `precision.py` perlu trik dab
+  manual di sisi raster; di sisi SVG masalah itu tidak muncul sama sekali).
+- **Lingkaran presisi matematis sempurna** lewat elemen `<circle>` SVG
+  asli -- bukan lagi pendekatan poligon N-titik seperti di raster.
+- Siap dibuka di Illustrator/Inkscape/CorelDRAW, atau diimpor langsung ke
+  software **cutting plotter/laser cutter** kalau nirmananya mau dipamerkan
+  secara fisik (bukan cuma dicetak datar).
+- File jauh lebih kecil daripada PNG resolusi cetak untuk komposisi yang
+  didominasi garis/bentuk sederhana.
+
+**Figure-Ground istimewa**: operasi XOR raster (`generators/classic_nirmana.py`)
+digantikan `fill-rule="evenodd"` pada satu `<path>` gabungan berisi semua
+sub-bentuk -- padanan vektor EKSAK (bukan aproksimasi) dari XOR piksel:
+area yang tertutup jumlah ganjil sub-path terisi, genap kosong.
+
+**Keseimbangan Asimetris istimewa**: titik berat dihitung ANALITIK dari
+luas & posisi tiap bentuk (`generators/classic_nirmana.py: _shape_area`),
+bukan menjumlahkan piksel hasil render -- untuk bentuk simetris beraturan
+ini justru LEBIH presisi daripada versi raster, bukan aproksimasi ulang.
+
+Teknik berbasis noise/tekstur piksel (organik burst, DLA branching,
+distorsi vortex, moire, dsb) SENGAJA tidak diekspor SVG -- itu secara
+fundamental raster (jutaan nilai piksel unik hasil simulasi), SVG-nya
+justru akan jauh lebih besar & lebih lambat dibuka tanpa manfaat presisi
+tambahan. Lihat `generators/svg_export.py` untuk penjelasan lengkap &
+utilitas `SVGCanvas` yang dipakai bersama.
+
+Aktifkan lewat CLI: setelah memilih teknik & sebelum batch mulai render,
+akan ditanya "Ekspor juga sebagai SVG?" (hanya muncul kalau teknik yang
+dipilih -- atau mode acak -- mendukungnya). File `.svg` disimpan
+berdampingan dengan `.png` di folder `outputs/`, memakai seed yang sama
+persis supaya kedua file "karya yang sama", cuma beda format. **Catatan**:
+SVG saat ini selalu monokrom -- palet warna PNG belum diterapkan ke SVG.
+
 ## Sistem Warna
 
 Tiga mode dipilih lewat CLI:
@@ -329,13 +450,53 @@ mengorbankan ketajaman baca dari jarak pandang normal).
   `main.py` dan `composition.py` (Mosaik Voronoi) memanggil
   `render_base_technique()` yang sama persis dari sini — begitu ada
   teknik baru ditambahkan, semua bagian sistem otomatis ikut punya akses.
-- **`quality.py`** — evaluator kualitas otomatis (`generate_best_of`).
-  Karena semua teknik memakai elemen acak, tidak semua seed menghasilkan
-  komposisi enak dipandang. Fungsi ini merender N kandidat, menilai
-  masing-masing lewat 4 metrik objektif (ink coverage balance, contrast,
-  edge density, centering), lalu memilih otomatis yang skornya tertinggi
-  — prinsip "best-of-N sampling" yang sama dipakai tool generative art
-  profesional. Diaktifkan lewat CLI (masukkan jumlah kandidat > 1).
+- **`quality.py`** — evaluator kualitas otomatis, sekarang bukan cuma
+  penilai angka tapi "asisten kritik" yang memberi umpan balik tekstual
+  spesifik & bisa ditindaklanjuti (seperti art director mengomentari
+  tugas mahasiswa), lewat dua fungsi:
+  - `generate_best_of()` — karena semua teknik memakai elemen acak, tidak
+    semua seed menghasilkan komposisi enak dipandang. Fungsi ini merender
+    N kandidat, menilai masing-masing lewat 6 metrik objektif, lalu
+    memilih otomatis yang skornya tertinggi ("best-of-N sampling").
+    Diaktifkan lewat CLI (masukkan jumlah kandidat > 1).
+  - `generate_critique()` — dipanggil otomatis untuk SETIAP karya yang
+    dihasilkan (tidak perlu mode kualitas aktif), mencetak poin-poin
+    kritik konkret ke log CLI, mis. *"Ada satu area kosong besar
+    tersambung (~62% bidang kanvas) -- komposisi terasa belum penuh"*
+    atau *"Bobot visual condong ke sisi kanan -- pertimbangkan menambah
+    elemen penyeimbang di sisi berlawanan"*.
+
+  Enam metrik yang dipakai (dihitung generik untuk latar terang MAUPUN
+  gelap -- warna latar dominan dideteksi otomatis lewat puncak histogram,
+  tidak diasumsikan selalu putih):
+  1. **Ink ratio** -- proporsi piksel "berisi tinta" (beda jauh dari
+     warna latar dominan), tidak boleh terlalu ekstrem kosong/penuh.
+  2. **Area kosong tersambung terbesar** *(metrik baru)* -- lewat
+     connected-component labeling (`scipy.ndimage.label`) pada mask
+     "blank" hasil downsample, menangkap LANGSUNG masalah "satu
+     kuadran/sudut kosong besar" yang sebelumnya cuma ketahuan lewat
+     audit visual manual satu teknik per satu teknik (persis masalah
+     "kurang full-page" yang diperbaiki manual di sesi-sesi sebelumnya
+     -- sekarang terdeteksi otomatis).
+  3. **Keseimbangan kuadran** -- bobot visual (massa tinta) kiri vs kanan
+     & atas vs bawah, dengan kritik yang menyebut SISI mana yang berat
+     (bukan cuma "kurang seimbang" generik).
+  4. **Contrast** (std dev grayscale).
+  5. **Edge density** -- kekayaan detail struktural.
+  6. **Centering** -- jarak titik berat visual dari pusat kanvas.
+
+  **Konteks-sadar (`sparse_ok`)**: sejumlah teknik memang SENGAJA jarang
+  sebagai prinsip desain -- Nirmana Keseimbangan Asimetris butuh ruang
+  negatif luas, motif radial diskret (`motif_arrow`, `motif_shapecross`,
+  dst.) & grid titik halftone secara alami punya banyak area antar-elemen
+  kosong. Tanpa penyesuaian, evaluator akan salah mengkritik ruang kosong
+  yang disengaja ini sebagai cacat. Daftar `SPARSE_BY_DESIGN` di
+  `registry.py` menandai teknik-teknik ini; `main.py` otomatis melunakkan
+  ambang & bahasa kritik untuknya. Evaluator juga menghitung
+  **ink bounding-box coverage** (seberapa jauh elemen membentang sampai
+  ke tepi kanvas) -- kalau elemen sudah menjangkau nyaris semua tepi,
+  area kosong tersambung besar di antaranya dianggap "napas" gaya sparse
+  yang wajar, bukan cacat, walau teknik itu tidak terdaftar `sparse_ok`.
 - **`gallery.py`** — setelah satu batch selesai, `main.py` otomatis
   membuat `outputs/galeri.html`: kontak-sheet portable (gambar di-embed
   base64, bisa dibuka/dibagikan sendirian) untuk melihat semua hasil
@@ -363,8 +524,14 @@ sedang (5-15 karya) yang paling sering dipakai orang.
 ## Struktur Proyek
 
 ```
-nirmana/
-├── main.py                       # CLI orchestrator
+nirmana-main/
+├── main.py                       # CLI orchestrator (interaktif + argparse non-interaktif)
+├── requirements.txt               # Dependensi pip
+├── pyproject.toml                 # Metadata packaging (pip install -e .)
+├── LICENSE                        # MIT
+├── tests/
+│   └── test_generators.py         # Test suite pytest (smoke test semua teknik + unit test)
+├── examples/                       # Contoh render kurasi untuk README
 ├── generators/
 │   ├── flowfield.py               # Mesin distorsi vortex (dipakai bersama)
 │   ├── precision.py               # [BARU] Jaminan garis/lengkung anti-patahan (dipakai bersama)
@@ -376,7 +543,8 @@ nirmana/
 │   ├── depth_explorations.py     # Teknik 6: Depth Exploration (3 varian)
 │   ├── emotive.py                # Teknik 7: Gestur Emosional (abstrak ekspresif)
 │   ├── line_hierarchy.py         # Teknik 8: Garis Tebal-Tipis (3 varian)
-│   ├── classic_nirmana.py        # [BARU] Teknik 11: 4 Nirmana Klasik DKV (6 varian)
+│   ├── classic_nirmana.py        # Teknik 11: 4 Nirmana Klasik DKV (6 varian)
+│   ├── svg_export.py             # [BARU] Utilitas ekspor SVG (SVGCanvas)
 │   ├── radial_motif.py           # Teknik 9: Motif Radial (4 varian)
 │   ├── composition.py            # Teknik 10: Mosaik Voronoi
 │   ├── stratum.py                # Sedimen / Kekosongan / Patahan (kedalaman formal)
@@ -387,7 +555,7 @@ nirmana/
 │   ├── gallery.py                # Generator galeri HTML kontak-sheet
 │   ├── presets.py                # Preset kurasi teknik+warna siap pakai
 │   └── palette.py                # Palet kurasi + generator warna acak
-└── outputs/                      # Hasil render + galeri.html (dibuat otomatis)
+└── outputs/                      # Hasil render + galeri.html (dibuat otomatis, di-gitignore)
 ```
 
 ## Menggunakan sebagai Library (tanpa CLI)
@@ -414,9 +582,28 @@ img = gen.generate_isometric_cubes()
 img.save("hasil_geometrik.png")
 ```
 
-## Rencana Pengembangan Lanjutan (belum diimplementasi)
+## Status Pengembangan & Roadmap
 
-- Quality evaluator otomatis (kontras, keseimbangan komposisi, rule of
-  thirds) untuk memilih kandidat terbaik dari beberapa render, seperti
-  arsitektur `NirBaru` di proyek asli — bisa diadaptasi ke sistem ini.
-- Web/GUI viewer sederhana untuk preview cepat tanpa buka file satu-satu.
+Sudah diimplementasikan penuh: evaluator kualitas otomatis + asisten
+kritik (lihat bagian "Sistem Presisi" & `generators/quality.py`), galeri
+HTML viewer (`outputs/galeri.html`, dibuat otomatis tiap batch), ekspor
+SVG vektor, mode CLI non-interaktif, dan test suite (`tests/`).
+
+Ide pengembangan lanjutan yang belum digarap:
+
+- **Web GUI interaktif** (mis. Flask/FastAPI + preview live di browser)
+  supaya tidak perlu instalasi Python sama sekali untuk eksplorasi cepat
+  -- `galeri.html` saat ini statis (dibuat setelah batch selesai), belum
+  ada preview real-time sebelum commit ke disk.
+- **Palet warna untuk SVG** -- ekspor SVG saat ini selalu monokrom;
+  menerapkan `recolor_duotone` yang sama ke elemen SVG (ganti atribut
+  `fill`/`stroke`) relatif mudah ditambahkan.
+- **Ekspor PDF** langsung dari SVG (lewat pipeline `cairosvg` atau
+  serupa) untuk alur cetak profesional tanpa lewat software perantara.
+- **Preset per-teknik yang lebih kaya** -- saat ini preset kurasi
+  mengikat satu teknik + satu gaya warna; bisa dikembangkan jadi preset
+  yang juga mengunci parameter komposisi tertentu (mis. jumlah cincin,
+  rentang ketebalan) untuk hasil yang lebih dapat diprediksi.
+- **Animasi/interpolasi antar-seed** -- karena semua parameter teknik
+  numerik & deterministik, interpolasi antara dua seed untuk membuat
+  GIF/video transisi nirmana secara teoritis dimungkinkan.
